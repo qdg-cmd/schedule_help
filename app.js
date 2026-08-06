@@ -127,7 +127,10 @@ async function loadDataForSemester() {
     const docSnap = await getDoc(docRef);
     
     if (docSnap.exists()) {
-      const data = docSnap.data().data;
+      let data = docSnap.data().data;
+      if (typeof data === 'string') {
+        data = JSON.parse(data);
+      }
       if (data && data.length > 0) {
         processRawData(data);
         renderTimetables();
@@ -448,7 +451,7 @@ document.getElementById("btn-upload-excel").addEventListener("click", () => {
       );
       
       await setDoc(doc(db, `semester_${currentSemester}`, "timetable"), {
-        data: processed,
+        data: JSON.stringify(processed),
         updatedAt: new Date().toISOString()
       });
       
