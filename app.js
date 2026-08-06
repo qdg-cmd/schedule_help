@@ -389,45 +389,34 @@ function showModal(title, partners, mode, myName, myPeriod, rawSubject) {
   
   let html = `<div class="d-flex flex-column gap-3">`;
   partners.forEach((p, idx) => {
-    let summary = '';
     if (mode === 'swap') {
       summary = `
-        <div class="glass-panel" style="background: rgba(13, 110, 253, 0.05); border-color: var(--primary-color);">
+        <div class="glass-panel mb-2" style="background: rgba(13, 110, 253, 0.05); border-color: var(--primary-color);">
           <h4 class="text-primary mb-2 d-flex justify-between align-center">
             <span><i class="bi bi-check-circle-fill"></i> ${p.name} 선생님과 교체 가능</span>
             <button class="btn btn-sm btn-outline-primary btn-add-cart" data-type="swap" data-myname="${myName}" data-myperiod="${myPeriod}" data-mysubj="${rawSubject}" data-pname="${p.name}" data-pperiod="${p.pPeriod}" data-psubj="${p.pSubject}">장바구니 담기</button>
           </h4>
-          <div class="text-center font-bold" style="font-size: 1.1rem; margin-bottom: 10px;">
+          <div class="text-center font-bold" style="font-size: 1.1rem;">
             나의 <span class="text-danger">${myPeriod} [${rawSubject}]</span> ↔ ${p.name}T의 <span class="text-primary">${p.pPeriod} [${p.pSubject}]</span>
-          </div>
-          <div class="text-center">
-            <button class="btn btn-sm btn-secondary btn-toggle-timetable" data-target="tt-swap-${idx}">상대방 시간표 보기</button>
-          </div>
-          <div id="tt-swap-${idx}" class="partner-timetable-container hidden">
-            ${generatePartnerTimetableHtml(p.name)}
           </div>
         </div>
       `;
+      previewTable = buildPreviewTableSwap(myName, p.name, row, col, p.pRow, p.pCol, rawSubject, p.pSubject);
     } else {
       summary = `
-        <div class="glass-panel" style="background: rgba(13, 110, 253, 0.05); border-color: var(--primary-color);">
+        <div class="glass-panel mb-2" style="background: rgba(13, 110, 253, 0.05); border-color: var(--primary-color);">
           <h4 class="text-primary mb-2 d-flex justify-between align-center">
             <span><i class="bi bi-check-circle-fill"></i> ${p.name} 선생님</span>
             <button class="btn btn-sm btn-outline-info btn-add-cart" data-type="cover" data-myname="${myName}" data-myperiod="${myPeriod}" data-mysubj="${rawSubject}" data-pname="${p.name}" data-pperiod="" data-psubj="">장바구니 담기</button>
           </h4>
-          <div class="text-center font-bold" style="font-size: 1.1rem; margin-bottom: 10px;">
+          <div class="text-center font-bold" style="font-size: 1.1rem;">
             나의 <span class="text-danger">${myPeriod} [${rawSubject}]</span> ↔ <span class="text-primary">${p.name} 선생님</span>께 대강 요청
-          </div>
-          <div class="text-center">
-            <button class="btn btn-sm btn-secondary btn-toggle-timetable" data-target="tt-cover-${idx}">상대방 시간표 보기</button>
-          </div>
-          <div id="tt-cover-${idx}" class="partner-timetable-container hidden">
-            ${generatePartnerTimetableHtml(p.name)}
           </div>
         </div>
       `;
+      previewTable = buildPreviewTableCover(myName, p.name, row, p.pRow, col, rawSubject);
     }
-    html += summary;
+    html += `<div class="mb-4 border-bottom pb-3">${summary}${previewTable}</div>`;
   });
   html += `</div>`;
   modalBody.innerHTML = html;
@@ -445,64 +434,66 @@ function showModal(title, partners, mode, myName, myPeriod, rawSubject) {
       );
     });
   });
-
-  modalBody.querySelectorAll(".btn-toggle-timetable").forEach(btn => {
-    btn.addEventListener("click", () => {
-      const targetId = btn.dataset.target;
-      const targetDiv = document.getElementById(targetId);
-      if (targetDiv.classList.contains("hidden")) {
-        targetDiv.classList.remove("hidden");
-        btn.textContent = "상대방 시간표 접기";
-      } else {
-        targetDiv.classList.add("hidden");
-        btn.textContent = "상대방 시간표 보기";
-      }
-    });
-  });
   
   modal.classList.remove("hidden");
+}
+
+function buildPreviewTableSwap(myName, pName, row, col, pRow, pCol, rawSubject, pSubject) {
+  let pt = `<div class="table-responsive"><table class="table table-sm table-bordered text-center align-middle bg-white" style="table-layout: fixed; width: 100%; min-width: 900px; font-size: 0.8rem;">
+    <thead class="table-light"><tr><th style="width: 60px;">교사</th>`;
+  
+  for(let j = 1; j < headerRow.length; j++) {
+    let thClass = (j === col || j === pCol) ? 'bg-warning text-dark' : '';
+    pt += `<th class="${thClass}">${headerRow[j]}</th>`;
+  }
+  pt += `</tr></thead><tbody><tr><td class="font-bold bg-light">${myName}</td>`;
+  
+  for(let j = 1; j < headerRow.length; j++) {
+    let v = isFree(fullData[row][j]) ? "공강" : formatSubject(fullData[row][j]);
+    if (j === col) pt += `<td style="background:var(--danger-color); color:white; font-weight:bold;">${formatSubject(rawSubject)}</td>`;
+    else if (j === pCol) pt += `<td style="background:var(--primary-color); color:white; font-weight:bold;">공강</td>`;
+    else pt += `<td>${isFree(fullData[row][j]) ? "" : v}</td>`;
+  }
+  pt += `</tr><tr><td class="font-bold bg-light">${pName}</td>`;
+  
+  for(let j = 1; j < headerRow.length; j++) {
+    let v = isFree(fullData[pRow][j]) ? "공강" : formatSubject(fullData[pRow][j]);
+    if (j === col) pt += `<td style="background:var(--primary-color); color:white; font-weight:bold;">공강</td>`;
+    else if (j === pCol) pt += `<td style="background:var(--danger-color); color:white; font-weight:bold;">${formatSubject(pSubject)}</td>`;
+    else pt += `<td>${isFree(fullData[pRow][j]) ? "" : v}</td>`;
+  }
+  return pt + `</tr></tbody></table></div>`;
+}
+
+function buildPreviewTableCover(myName, pName, row, pRow, col, rawSubject) {
+  let pt = `<div class="table-responsive"><table class="table table-sm table-bordered text-center align-middle bg-white" style="table-layout: fixed; width: 100%; min-width: 900px; font-size: 0.8rem;">
+    <thead class="table-light"><tr><th style="width: 60px;">교사</th>`;
+    
+  for(let j = 1; j < headerRow.length; j++) {
+    let thClass = (j === col) ? 'bg-warning text-dark' : '';
+    pt += `<th class="${thClass}">${headerRow[j]}</th>`;
+  }
+  pt += `</tr></thead><tbody><tr><td class="font-bold bg-light">${myName}</td>`;
+  
+  for(let j = 1; j < headerRow.length; j++) {
+    let v = isFree(fullData[row][j]) ? "" : formatSubject(fullData[row][j]);
+    if (j === col) pt += `<td style="background:var(--danger-color); color:white; font-weight:bold;">${formatSubject(rawSubject)}</td>`;
+    else pt += `<td>${v}</td>`;
+  }
+  pt += `</tr><tr><td class="font-bold bg-light">${pName}</td>`;
+  
+  for(let j = 1; j < headerRow.length; j++) {
+    let v = isFree(fullData[pRow][j]) ? "" : formatSubject(fullData[pRow][j]);
+    if (j === col) pt += `<td style="background:var(--primary-color); color:white; font-weight:bold;">공강</td>`;
+    else pt += `<td>${v}</td>`;
+  }
+  return pt + `</tr></tbody></table></div>`;
 }
 
 btnCloseModal.addEventListener("click", () => {
   modal.classList.add("hidden");
 });
 
-function generatePartnerTimetableHtml(teacherName) {
-  let html = `<table class="table table-sm text-center" style="font-size: 0.85rem;">
-    <thead>
-      <tr>
-        <th style="width: 40px;">교시</th>
-        ${['월','화','수','목','금'].map(d => `<th>${d}</th>`).join('')}
-      </tr>
-    </thead>
-    <tbody>
-  `;
-  for (let r = 1; r <= 7; r++) {
-    html += `<tr><td class="font-bold text-muted bg-light">${r}</td>`;
-    for (let c = 1; c <= 5; c++) {
-      let subj = getTeacherSubject(teacherName, r, c) || "";
-      if (subj) {
-        html += `<td style="background:var(--primary-color);color:white;border-radius:4px;">${subj}</td>`;
-      } else {
-        html += `<td class="text-muted" style="background:#f8f9fa;border-radius:4px;">-</td>`;
-      }
-    }
-    html += `</tr>`;
-  }
-  html += `</tbody></table>`;
-  return html;
-}
-
-function getTeacherSubject(name, period, dayIdx) {
-  const row = fullData.find(r => r[0] === name);
-  if (!row) return null;
-  const colIndex = (dayIdx - 1) * 7 + period;
-  return row[colIndex] || null;
-}
-
-btnCloseModal.addEventListener("click", () => {
-  modal.classList.remove("active");
-});
 
 // Admin Features
 btnAdminLogin.addEventListener("click", async () => {
