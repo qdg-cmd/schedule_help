@@ -389,6 +389,8 @@ function showModal(title, partners, mode, myName, myPeriod, rawSubject) {
   
   let html = `<div class="d-flex flex-column gap-3">`;
   partners.forEach((p, idx) => {
+    let summary = '';
+    let previewTable = '';
     if (mode === 'swap') {
       summary = `
         <div class="glass-panel mb-2" style="background: rgba(13, 110, 253, 0.05); border-color: var(--primary-color);">
