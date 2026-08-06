@@ -46,11 +46,24 @@
 
   <!-- 메인 레이아웃 -->
   <div class="app-container hidden" id="main-app">
+    <!-- 모바일 전용 헤더 (PC에선 숨김) -->
+    <header class="mobile-header glass-panel d-md-none">
+      <h3 style="margin: 0; font-size: 1.2rem; display: flex; align-items: center; gap: 8px;">
+        <i class="bi bi-calendar2-week-fill text-primary"></i> 시간표 도우미
+      </h3>
+      <button id="btn-mobile-menu" class="btn btn-outline-secondary btn-sm" style="font-size: 1.5rem; padding: 2px 8px;">
+        <i class="bi bi-list"></i>
+      </button>
+    </header>
+
     <!-- 사이드바 -->
-    <aside class="sidebar glass-panel">
-      <div class="sidebar-header">
-        <i class="bi bi-calendar2-week-fill text-primary"></i>
-        <h3>시간표 도우미</h3>
+    <aside class="sidebar glass-panel" id="sidebar">
+      <div class="sidebar-header d-flex justify-between align-center">
+        <div style="display: flex; align-items: center; gap: 8px;">
+          <i class="bi bi-calendar2-week-fill text-primary"></i>
+          <h3 style="margin:0;">시간표 도우미</h3>
+        </div>
+        <button id="btn-close-sidebar" class="btn btn-sm btn-icon d-md-none"><i class="bi bi-x-lg"></i></button>
       </div>
       
       <!-- 학기 전환 토글 -->

@@ -44,6 +44,22 @@ const btnAdminLogin = document.getElementById("btn-admin-login");
 const cutoffInput = document.getElementById("semester-cutoff-date");
 const btnSaveCutoff = document.getElementById("btn-save-cutoff");
 
+// Mobile Sidebar Toggle
+const btnMobileMenu = document.getElementById("btn-mobile-menu");
+const btnCloseSidebar = document.getElementById("btn-close-sidebar");
+const sidebar = document.getElementById("sidebar");
+
+if (btnMobileMenu && sidebar) {
+  btnMobileMenu.addEventListener("click", () => {
+    sidebar.classList.add("show");
+  });
+}
+if (btnCloseSidebar && sidebar) {
+  btnCloseSidebar.addEventListener("click", () => {
+    sidebar.classList.remove("show");
+  });
+}
+
 // Navigation
 document.querySelectorAll(".nav-item").forEach(item => {
   item.addEventListener("click", (e) => {
@@ -54,6 +70,9 @@ document.querySelectorAll(".nav-item").forEach(item => {
     item.classList.add("active");
     const target = document.getElementById(item.getAttribute("data-target"));
     if (target) target.classList.remove("hidden");
+    
+    // Close sidebar on mobile after clicking
+    if (sidebar) sidebar.classList.remove("show");
   });
 });
 
@@ -71,6 +90,8 @@ document.querySelector(".admin-nav").addEventListener("click", (e) => {
     document.getElementById("admin-auth-area").classList.add("hidden");
     document.getElementById("admin-dashboard").classList.remove("hidden");
   }
+  
+  if (sidebar) sidebar.classList.remove("show");
 });
 
 // Initialize App

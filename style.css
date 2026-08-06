@@ -350,3 +350,62 @@ body {
   overflow-y: auto;
   padding: 1rem 0;
 }
+
+/* 모바일 전용 반응형 미디어 쿼리 */
+@media (min-width: 769px) {
+  .d-md-none { display: none !important; }
+}
+
+@media (max-width: 768px) {
+  .app-container {
+    flex-direction: column;
+    padding: 0.5rem;
+  }
+  .mobile-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 0.75rem 1rem;
+    margin-bottom: 0.5rem;
+  }
+  .sidebar {
+    position: fixed;
+    top: 0;
+    left: -300px;
+    width: 280px;
+    height: 100vh;
+    z-index: 10001;
+    background: rgba(255, 255, 255, 0.95);
+    transition: left 0.3s ease;
+    box-shadow: 2px 0 10px rgba(0,0,0,0.2);
+    border-radius: 0;
+  }
+  .sidebar.show {
+    left: 0;
+  }
+  .main-content {
+    flex: 1;
+    overflow-y: auto;
+    padding: 0;
+  }
+  .content-header h2 {
+    font-size: 1.3rem;
+  }
+  .search-bar {
+    flex-direction: column;
+    align-items: stretch;
+  }
+  .admin-grid {
+    grid-template-columns: 1fr;
+  }
+  .timetable-wrapper {
+    overflow-x: auto;
+  }
+  .table {
+    font-size: 0.8rem;
+  }
+  .modal-content {
+    width: 95%;
+    padding: 1rem;
+  }
+}
