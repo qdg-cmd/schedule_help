@@ -35,11 +35,11 @@ const appPwdInput = document.getElementById("app-password");
 const btnLogin = document.getElementById("btn-login");
 const authError = document.getElementById("auth-error");
 
-const modal = document.getElementById("matching-modal");
+const modal = document.getElementById("result-modal");
 const modalTitle = document.getElementById("modal-title");
 const modalBody = document.getElementById("modal-body");
 const btnCloseModal = document.getElementById("btn-close-modal");
-const adminPwdInput = document.getElementById("admin-password");
+const adminPwdInput = document.getElementById("admin-password-input");
 const btnAdminLogin = document.getElementById("btn-admin-login");
 const cutoffInput = document.getElementById("semester-cutoff-date");
 const btnSaveCutoff = document.getElementById("btn-save-cutoff");
@@ -65,10 +65,10 @@ document.querySelector(".admin-nav").addEventListener("click", (e) => {
   document.getElementById("tab-admin").classList.remove("hidden");
   
   if (!sessionStorage.getItem("adminAuth")) {
-    document.getElementById("admin-login-area").classList.remove("hidden");
+    document.getElementById("admin-auth-area").classList.remove("hidden");
     document.getElementById("admin-dashboard").classList.add("hidden");
   } else {
-    document.getElementById("admin-login-area").classList.add("hidden");
+    document.getElementById("admin-auth-area").classList.add("hidden");
     document.getElementById("admin-dashboard").classList.remove("hidden");
   }
 });
@@ -96,8 +96,6 @@ async function init() {
     mainApp.classList.remove("hidden");
     await loadDataForSemester();
   }
-
-  setupEventListeners();
 }
 
 function saveLocalState() {
@@ -134,14 +132,13 @@ document.getElementById("btn-reset-local").addEventListener("click", () => {
 });
 
 // Semester Change
-document.querySelectorAll(".semester-btn").forEach(btn => {
-  btn.addEventListener("click", async (e) => {
-    currentSemester = parseInt(e.target.dataset.sem);
-    document.querySelectorAll(".semester-btn").forEach(b => b.classList.remove("active"));
-    e.target.classList.add("active");
+const semesterSelect = document.getElementById("semester-select");
+if (semesterSelect) {
+  semesterSelect.addEventListener("change", async (e) => {
+    currentSemester = parseInt(e.target.value);
     await loadDataForSemester();
   });
-});
+}
 
 // Data Loading
 async function loadDataForSemester() {
@@ -195,12 +192,10 @@ function autoSelectSemester() {
     currentSemester = 1;
   }
   
-  document.querySelectorAll(".semester-btn").forEach(b => {
-    b.classList.remove("active");
-    if(parseInt(b.getAttribute("data-sem")) === currentSemester) {
-      b.classList.add("active");
-    }
-  });
+  const semesterSelect = document.getElementById("semester-select");
+  if (semesterSelect) {
+    semesterSelect.value = currentSemester.toString();
+  }
 }
 
 function showNoData() {
@@ -513,7 +508,7 @@ btnAdminLogin.addEventListener("click", async () => {
     
     if (pwd === realPwd) {
       sessionStorage.setItem("adminAuth", "true");
-      document.getElementById("admin-login-area").classList.add("hidden");
+      document.getElementById("admin-auth-area").classList.add("hidden");
       document.getElementById("admin-dashboard").classList.remove("hidden");
     } else {
       alert("비밀번호가 틀렸습니다.");
@@ -580,33 +575,47 @@ function renderMeetingTab() {
   let html = "";
   teachers.forEach((t, i) => {
     let isChecked = selected.includes(t) ? "checked" : "";
+    let btnStyle = selected.includes(t) ? "background: var(--primary-color); color: white;" : "background: rgba(255,255,255,0.6); color: inherit;";
     html += `
-      <div class="d-flex align-center gap-2 mb-2 p-1 teacher-chk-item" style="background: rgba(255,255,255,0.6); border-radius: 4px;">
-        <input type="checkbox" id="chk-${i}" value="${t}" class="chk-teacher" ${isChecked}>
-        <label for="chk-${i}" class="w-100 is-clickable teacher-toggle-btn">${t}</label>
+      <div class="mb-2 teacher-chk-item">
+        <input type="checkbox" id="chk-${i}" value="${t}" class="chk-teacher d-none" ${isChecked}>
+        <label for="chk-${i}" class="w-100 is-clickable teacher-toggle-btn text-center rounded border" style="padding: 10px; transition: all 0.2s; margin: 0; cursor: pointer; display: block; ${btnStyle}">${t}</label>
       </div>
     `;
   });
   clContainer.innerHTML = html;
 
   document.querySelectorAll(".chk-teacher").forEach(chk => {
-    chk.addEventListener("change", () => {
+    chk.addEventListener("change", (e) => {
       const selectedNow = Array.from(document.querySelectorAll(".chk-teacher:checked")).map(c => c.value);
       localState[`semester${currentSemester}`].selectedTeachers = selectedNow;
       saveLocalState();
+      
+      const label = e.target.nextElementSibling;
+      if (e.target.checked) {
+        label.style.background = "var(--primary-color)";
+        label.style.color = "white";
+      } else {
+        label.style.background = "rgba(255,255,255,0.6)";
+        label.style.color = "inherit";
+      }
     });
   });
 
   document.getElementById("search-meeting-teacher").addEventListener("input", (e) => {
     const kw = e.target.value.trim();
     document.querySelectorAll(".teacher-chk-item").forEach(div => {
-      div.style.display = div.innerText.includes(kw) ? "flex" : "none";
+      div.style.display = div.innerText.includes(kw) ? "block" : "none";
     });
   });
 }
 
 document.getElementById("btn-clear-meeting").addEventListener("click", () => {
-  document.querySelectorAll(".chk-teacher").forEach(chk => chk.checked = false);
+  document.querySelectorAll(".chk-teacher").forEach(chk => {
+    chk.checked = false;
+    chk.nextElementSibling.style.background = "rgba(255,255,255,0.6)";
+    chk.nextElementSibling.style.color = "inherit";
+  });
   localState[`semester${currentSemester}`].selectedTeachers = [];
   saveLocalState();
   document.getElementById("meeting-result-area").innerHTML = `<div class="text-center py-4 text-muted">선택된 교사들의 시간표 데이터를 분석합니다.</div>`;
