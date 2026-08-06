@@ -340,8 +340,9 @@ function analyzeSwap(row, col, tdEl) {
 
   const myName = fullData[row][0];
   const myPeriod = headerRow[col];
-  const classIdMatch = rawSubject.match(/^\d+/);
-  const searchTarget = classIdMatch ? classIdMatch[0] : rawSubject.trim();
+  const strSubject = String(rawSubject);
+  const classIdMatch = strSubject.match(/^\d+/);
+  const searchTarget = classIdMatch ? classIdMatch[0] : strSubject.trim();
   
   const partners = [];
   for (let r = 1; r < fullData.length; r++) {
@@ -351,7 +352,8 @@ function analyzeSwap(row, col, tdEl) {
     
     for (let c = 1; c < fullData[r].length; c++) {
       const pSubject = fullData[r][c];
-      if (!isFree(pSubject) && pSubject.includes(searchTarget) && isFree(fullData[row][c])) {
+      const strPSubject = String(pSubject);
+      if (!isFree(strPSubject) && strPSubject.includes(searchTarget) && isFree(fullData[row][c])) {
         partners.push({ name: pName, pPeriod: headerRow[c], pSubject: pSubject, pRow: r, pCol: c });
       }
     }
@@ -575,11 +577,10 @@ function renderMeetingTab() {
   let html = "";
   teachers.forEach((t, i) => {
     let isChecked = selected.includes(t) ? "checked" : "";
-    let btnStyle = selected.includes(t) ? "background: var(--primary-color); color: white;" : "background: rgba(255,255,255,0.6); color: inherit;";
     html += `
-      <div class="mb-2 teacher-chk-item">
-        <input type="checkbox" id="chk-${i}" value="${t}" class="chk-teacher d-none" ${isChecked}>
-        <label for="chk-${i}" class="w-100 is-clickable teacher-toggle-btn text-center rounded border" style="padding: 10px; transition: all 0.2s; margin: 0; cursor: pointer; display: block; ${btnStyle}">${t}</label>
+      <div class="d-flex align-center gap-2 mb-2 p-1 teacher-chk-item" style="background: rgba(255,255,255,0.6); border-radius: 4px;">
+        <input type="checkbox" id="chk-${i}" value="${t}" class="chk-teacher" ${isChecked}>
+        <label for="chk-${i}" class="w-100 is-clickable teacher-toggle-btn">${t}</label>
       </div>
     `;
   });
@@ -590,15 +591,7 @@ function renderMeetingTab() {
       const selectedNow = Array.from(document.querySelectorAll(".chk-teacher:checked")).map(c => c.value);
       localState[`semester${currentSemester}`].selectedTeachers = selectedNow;
       saveLocalState();
-      
-      const label = e.target.nextElementSibling;
-      if (e.target.checked) {
-        label.style.background = "var(--primary-color)";
-        label.style.color = "white";
-      } else {
-        label.style.background = "rgba(255,255,255,0.6)";
-        label.style.color = "inherit";
-      }
+      updateMeetingTimetable(selectedNow);
     });
   });
 
@@ -608,17 +601,53 @@ function renderMeetingTab() {
       div.style.display = div.innerText.includes(kw) ? "block" : "none";
     });
   });
+  
+  updateMeetingTimetable(selected);
+}
+
+function updateMeetingTimetable(selected) {
+  const container = document.getElementById("meeting-timetable-area");
+  if (selected.length === 0) {
+    container.innerHTML = `<div class="text-center py-3 text-muted">교사를 선택해주세요.</div>`;
+    return;
+  }
+  
+  let html = `<div class="table-responsive"><table class="table table-bordered table-sm text-center" style="font-size: 0.8rem; min-width: 1200px;">
+    <thead><tr><th style="width: 80px; position: sticky; left: 0; background: #fff; z-index: 2;">교사</th>`;
+  for (let c = 1; c < headerRow.length; c++) {
+    html += `<th>${headerRow[c]}</th>`;
+  }
+  html += `</tr></thead><tbody>`;
+  
+  selected.forEach(tName => {
+    let rowIdx = fullData.findIndex(r => r[0] === tName);
+    if (rowIdx === -1) return;
+    html += `<tr><td class="font-bold bg-light" style="position: sticky; left: 0; z-index: 1;">${tName}</td>`;
+    for (let c = 1; c < fullData[rowIdx].length; c++) {
+      let isEx = isExcluded(tName, c);
+      let isBusy = !isFree(fullData[rowIdx][c]);
+      if (isEx) {
+        html += `<td style="background:var(--danger-color);color:white;" title="교체불가">불가</td>`;
+      } else if (isBusy) {
+        html += `<td style="background:var(--secondary-color);color:white;" title="${fullData[rowIdx][c]}">수업</td>`;
+      } else {
+        html += `<td class="text-muted" style="background:#f8f9fa;">공강</td>`;
+      }
+    }
+    html += `</tr>`;
+  });
+  html += `</tbody></table></div>`;
+  container.innerHTML = html;
 }
 
 document.getElementById("btn-clear-meeting").addEventListener("click", () => {
   document.querySelectorAll(".chk-teacher").forEach(chk => {
     chk.checked = false;
-    chk.nextElementSibling.style.background = "rgba(255,255,255,0.6)";
-    chk.nextElementSibling.style.color = "inherit";
   });
   localState[`semester${currentSemester}`].selectedTeachers = [];
   saveLocalState();
-  document.getElementById("meeting-result-area").innerHTML = `<div class="text-center py-4 text-muted">선택된 교사들의 시간표 데이터를 분석합니다.</div>`;
+  updateMeetingTimetable([]);
+  document.getElementById("meeting-result-area").innerHTML = `<div class="text-center py-4 text-muted">교사를 2명 이상 선택한 후 [공강 찾기]를 누르세요.</div>`;
 });
 
 document.getElementById("btn-find-meeting").addEventListener("click", () => {
@@ -631,13 +660,14 @@ document.getElementById("btn-find-meeting").addEventListener("click", () => {
   }
 
   let available = [];
-  let reasonsHtml = `<div class="mt-3"><h4 class="text-danger mb-2 font-bold"><i class="bi bi-info-circle"></i> 불가 사유 안내</h4><div class="d-flex flex-column gap-2">`;
+  let reasonsHtml = `<div class="mt-3"><div class="unavailable-box"><h4 class="text-danger mb-3 font-bold"><i class="bi bi-info-circle"></i> 불가 사유 안내</h4><div class="d-flex flex-column gap-2">`;
   let hasReasons = false;
 
   for (let c = 1; c < headerRow.length; c++) {
     let busyReasons = [];
     selected.forEach(s => {
       let r = fullData.findIndex(row => row[0] === s);
+      if (r === -1) return;
       let isEx = isExcluded(s, c);
       let hasClass = !isFree(fullData[r][c]);
       if (hasClass) busyReasons.push(`<span class="badge bg-secondary">${s} (수업)</span>`);
@@ -648,15 +678,15 @@ document.getElementById("btn-find-meeting").addEventListener("click", () => {
       available.push(headerRow[c]);
     } else {
       reasonsHtml += `
-        <div class="unavailable-box">
-          <div class="font-bold text-danger mb-1">${headerRow[c]} 불가</div>
+        <div class="d-flex align-center gap-3 border-bottom pb-2">
+          <div class="font-bold text-danger" style="min-width: 60px;">${headerRow[c]}</div>
           <div class="d-flex flex-wrap gap-1">${busyReasons.join(' ')}</div>
         </div>
       `;
       hasReasons = true;
     }
   }
-  reasonsHtml += `</div></div>`;
+  reasonsHtml += `</div></div></div>`;
 
   if (available.length === 0) {
     resultDiv.innerHTML = `<div class="text-danger text-center p-3 font-bold">모두 공강인 시간이 없습니다.</div>` + (hasReasons ? reasonsHtml : "");
