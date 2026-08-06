@@ -51,6 +51,9 @@
         <a href="#" class="nav-item" data-target="tab-exclusion">
           <i class="bi bi-dash-circle text-danger"></i> 교체 불가 설정
         </a>
+        <a href="#" class="nav-item" data-target="tab-cart">
+          <i class="bi bi-cart-check-fill text-primary"></i> 결보강 계획서
+        </a>
         <a href="#" class="nav-item admin-nav" data-target="tab-admin">
           <i class="bi bi-gear-fill text-secondary"></i> 데이터 관리
         </a>
@@ -154,7 +157,27 @@
         </div>
       </section>
 
-      <!-- 5. 데이터 관리 (관리자) -->
+      <!-- 5. 결보강 장바구니 -->
+      <section id="tab-cart" class="tab-pane hidden">
+        <div class="content-header">
+          <h2><i class="bi bi-cart-check-fill text-primary"></i> 결보강 계획서 (장바구니)</h2>
+          <p>담아둔 교체/대강 내역을 모아 엑셀 양식으로 한 번에 다운로드합니다.</p>
+        </div>
+        <div class="glass-panel mb-3">
+          <div class="d-flex justify-between align-center mb-3 border-bottom pb-2">
+            <h3 class="m-0"><i class="bi bi-list-task"></i> 담긴 내역 목록</h3>
+            <div>
+              <button id="btn-clear-cart" class="btn btn-outline-danger btn-sm me-2"><i class="bi bi-trash"></i> 비우기</button>
+              <button id="btn-download-plan" class="btn btn-success btn-sm"><i class="bi bi-download"></i> 계획서 엑셀 다운로드</button>
+            </div>
+          </div>
+          <div id="cart-list-area" class="table-responsive" style="max-height: 50vh; overflow-y: auto;">
+            <div class="text-center py-5 text-muted">장바구니가 비어 있습니다. 매칭 결과에서 내역을 담아주세요.</div>
+          </div>
+        </div>
+      </section>
+
+      <!-- 6. 데이터 관리 (관리자) -->
       <section id="tab-admin" class="tab-pane hidden">
         <div class="content-header">
           <h2><i class="bi bi-gear-fill text-secondary"></i> 데이터 관리</h2>

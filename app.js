@@ -23,8 +23,8 @@ let teachers = [];
 // Local Storage State
 let localState = {
   appPassword: "",
-  semester1: { selectedTeachers: [], exclusions: {} },
-  semester2: { selectedTeachers: [], exclusions: {} }
+  semester1: { selectedTeachers: [], exclusions: {}, cart: [] },
+  semester2: { selectedTeachers: [], exclusions: {}, cart: [] }
 };
 
 // Elements
@@ -55,7 +55,10 @@ function loadLocalState() {
   const saved = localStorage.getItem("timetableAppState");
   if (saved) {
     try {
-      localState = { ...localState, ...JSON.parse(saved) };
+      let parsed = JSON.parse(saved);
+      if (!parsed.semester1.cart) parsed.semester1.cart = [];
+      if (!parsed.semester2.cart) parsed.semester2.cart = [];
+      localState = { ...localState, ...parsed };
     } catch (e) {
       console.error(e);
     }
@@ -86,9 +89,9 @@ appPwdInput.addEventListener("keyup", (e) => {
 
 // Reset Local Settings
 document.getElementById("btn-reset-local").addEventListener("click", () => {
-  if (confirm("개인 설정(선택된 교사, 교체 불가 설정)을 초기화하시겠습니까?")) {
-    localState.semester1 = { selectedTeachers: [], exclusions: {} };
-    localState.semester2 = { selectedTeachers: [], exclusions: {} };
+  if (confirm("개인 설정(선택된 교사, 교체 불가 설정, 결보강 장바구니)을 초기화하시겠습니까?")) {
+    localState.semester1 = { selectedTeachers: [], exclusions: {}, cart: [] };
+    localState.semester2 = { selectedTeachers: [], exclusions: {}, cart: [] };
     saveLocalState();
     alert("초기화되었습니다.");
     location.reload();
@@ -136,6 +139,7 @@ async function loadDataForSemester() {
         renderTimetables();
         renderMeetingTab();
         renderExclusionTab();
+        renderCartTab();
       } else {
         showNoData();
       }
@@ -217,8 +221,19 @@ function renderTimetables() {
   document.getElementById("table-cover").innerHTML = generateTableHtml("analyzeCover");
   
   // Search listeners
-  document.getElementById("search-swap").addEventListener("input", (e) => highlightRow("table-swap", e.target.value));
-  document.getElementById("search-cover").addEventListener("input", (e) => highlightRow("table-cover", e.target.value));
+  const searchSwap = document.getElementById("search-swap");
+  const searchCover = document.getElementById("search-cover");
+  
+  searchSwap.addEventListener("input", (e) => highlightRow("table-swap", e.target.value));
+  searchCover.addEventListener("input", (e) => highlightRow("table-cover", e.target.value));
+  
+  // Enter key support for searches
+  searchSwap.addEventListener("keyup", (e) => {
+    if (e.key === "Enter") highlightRow("table-swap", e.target.value);
+  });
+  searchCover.addEventListener("keyup", (e) => {
+    if (e.key === "Enter") highlightRow("table-cover", e.target.value);
+  });
 }
 
 function highlightRow(containerId, kw) {
@@ -353,7 +368,10 @@ function showModal(myName, myPeriod, rawSubject, partners, row, col, mode) {
       if (mode === 'swap') {
         summary = `
           <div class="glass-panel" style="background: rgba(13, 110, 253, 0.05); border-color: var(--primary-color);">
-            <h4 class="text-primary mb-2"><i class="bi bi-check-circle-fill"></i> ${p.name} 선생님과 교체 가능</h4>
+            <h4 class="text-primary mb-2 d-flex justify-between align-center">
+              <span><i class="bi bi-check-circle-fill"></i> ${p.name} 선생님과 교체 가능</span>
+              <button class="btn btn-sm btn-outline-primary" onclick="addToCart('swap', '${myName}', '${myPeriod}', '${rawSubject}', '${p.name}', '${p.pPeriod}', '${p.pSubject}')">장바구니 담기</button>
+            </h4>
             <div class="text-center font-bold" style="font-size: 1.1rem;">
               나의 <span class="text-danger">${myPeriod} [${rawSubject}]</span> ↔ ${p.name}T의 <span class="text-primary">${p.pPeriod} [${p.pSubject}]</span>
             </div>
@@ -362,7 +380,10 @@ function showModal(myName, myPeriod, rawSubject, partners, row, col, mode) {
       } else {
         summary = `
           <div class="glass-panel" style="background: rgba(13, 110, 253, 0.05); border-color: var(--primary-color);">
-            <h4 class="text-primary mb-2"><i class="bi bi-check-circle-fill"></i> ${p.name} 선생님</h4>
+            <h4 class="text-primary mb-2 d-flex justify-between align-center">
+              <span><i class="bi bi-check-circle-fill"></i> ${p.name} 선생님</span>
+              <button class="btn btn-sm btn-outline-info" onclick="addToCart('cover', '${myName}', '${myPeriod}', '${rawSubject}', '${p.name}', '', '')">장바구니 담기</button>
+            </h4>
             <div class="text-center font-bold" style="font-size: 1.1rem;">
               나의 <span class="text-danger">${myPeriod} [${rawSubject}]</span> ↔ <span class="text-primary">${p.name} 선생님</span>께 대강 요청
             </div>
@@ -414,6 +435,10 @@ btnAdminLogin.addEventListener("click", async () => {
   }
 });
 
+adminPwdInput.addEventListener("keyup", (e) => {
+  if (e.key === "Enter") btnAdminLogin.click();
+});
+
 // Change Admin Password
 document.getElementById("btn-change-admin-pwd").addEventListener("click", async () => {
   const newPwd = document.getElementById("new-admin-password").value;
@@ -425,6 +450,10 @@ document.getElementById("btn-change-admin-pwd").addEventListener("click", async 
   } catch(e) {
     alert("오류: " + e.message);
   }
+});
+
+document.getElementById("new-admin-password").addEventListener("keyup", (e) => {
+  if (e.key === "Enter") document.getElementById("btn-change-admin-pwd").click();
 });
 
 // Excel Upload
@@ -718,6 +747,138 @@ document.getElementById("btn-download-template").addEventListener("click", () =>
   const wb = XLSX.utils.book_new();
   XLSX.utils.book_append_sheet(wb, ws, "시간표양식");
   XLSX.writeFile(wb, "수업교체시간표_양식.xlsx");
+});
+
+// --- Cart & Plan Generation ---
+
+window.addToCart = (type, myName, myPeriod, mySubject, partnerName, partnerPeriod, partnerSubject) => {
+  const cart = localState[`semester${currentSemester}`].cart;
+  cart.push({
+    id: Date.now().toString(),
+    type,
+    myName, myPeriod, mySubject,
+    partnerName, partnerPeriod, partnerSubject,
+    dateAdded: new Date().toLocaleDateString()
+  });
+  saveLocalState();
+  renderCartTab();
+  alert("결보강 장바구니에 담겼습니다!");
+};
+
+window.removeFromCart = (id) => {
+  let cart = localState[`semester${currentSemester}`].cart;
+  localState[`semester${currentSemester}`].cart = cart.filter(item => item.id !== id);
+  saveLocalState();
+  renderCartTab();
+};
+
+document.getElementById("btn-clear-cart").addEventListener("click", () => {
+  if(confirm("장바구니를 비우시겠습니까?")) {
+    localState[`semester${currentSemester}`].cart = [];
+    saveLocalState();
+    renderCartTab();
+  }
+});
+
+function renderCartTab() {
+  const cart = localState[`semester${currentSemester}`].cart;
+  const container = document.getElementById("cart-list-area");
+  
+  if (!cart || cart.length === 0) {
+    container.innerHTML = `<div class="text-center py-5 text-muted">장바구니가 비어 있습니다. 매칭 결과에서 내역을 담아주세요.</div>`;
+    return;
+  }
+  
+  let html = `<table class="table" style="min-width:700px;">
+    <thead><tr>
+      <th>종류</th><th>원수업 교사</th><th>교체/대강 대상</th><th>나의 수업 시간</th><th>상대방 수업 시간</th><th>관리</th>
+    </tr></thead><tbody>`;
+    
+  cart.forEach(item => {
+    let typeBadge = item.type === 'swap' ? '<span class="badge bg-success" style="padding:4px;border-radius:4px;color:white;background:var(--success-color)">교체</span>' : '<span class="badge bg-info" style="padding:4px;border-radius:4px;color:white;background:var(--info-color)">대강</span>';
+    
+    html += `<tr>
+      <td>${typeBadge}</td>
+      <td class="font-bold">${item.myName}</td>
+      <td class="text-primary font-bold">${item.partnerName}</td>
+      <td>${item.myPeriod}<br><small class="text-muted">${item.mySubject}</small></td>
+      <td>${item.type === 'swap' ? item.partnerPeriod + '<br><small class="text-muted">' + item.partnerSubject + '</small>' : '-'}</td>
+      <td><button class="btn btn-sm btn-outline-danger" onclick="removeFromCart('${item.id}')">삭제</button></td>
+    </tr>`;
+  });
+  html += `</tbody></table>`;
+  container.innerHTML = html;
+}
+
+document.getElementById("btn-download-plan").addEventListener("click", () => {
+  const cart = localState[`semester${currentSemester}`].cart;
+  if (!cart || cart.length === 0) {
+    return alert("장바구니가 비어 있습니다.");
+  }
+  
+  // Create an Excel Sheet that fits on one page and mimics the HWpx form
+  const ws_data = [];
+  
+  // Header
+  ws_data.push(["결 보 강  계 획 서"]);
+  ws_data.push([""]); // Empty row
+  
+  // Construct the table
+  ws_data.push(["구 분", "원수업교사", "과목 및 학반", "결강(변경전) 일시", "보강교사", "보강(변경후) 일시", "사 유"]);
+  
+  cart.forEach(item => {
+    let typeStr = item.type === 'swap' ? '교체' : '대강';
+    let mySubj = item.mySubject.replace(/<br>/g, " ");
+    let partnerTime = item.type === 'swap' ? item.partnerPeriod : '대강';
+    
+    ws_data.push([
+      typeStr,
+      item.myName,
+      mySubj,
+      item.myPeriod,
+      item.partnerName,
+      partnerTime,
+      "" // Reason (left blank for user to fill)
+    ]);
+  });
+  
+  ws_data.push([""]);
+  ws_data.push(["위와 같이 결보강 계획서를 제출합니다."]);
+  ws_data.push([""]);
+  const today = new Date();
+  ws_data.push([`2026년  ${today.getMonth()+1}월  ${today.getDate()}일`]);
+  ws_data.push([""]);
+  ws_data.push(["제출자:                   (인)"]);
+  
+  const ws = XLSX.utils.aoa_to_sheet(ws_data);
+  
+  // Set column widths
+  ws["!cols"] = [
+    { wch: 8 },  // 구분
+    { wch: 12 }, // 원수업교사
+    { wch: 15 }, // 과목 및 학반
+    { wch: 18 }, // 결강일시
+    { wch: 12 }, // 보강교사
+    { wch: 18 }, // 보강일시
+    { wch: 15 }  // 사유
+  ];
+
+  // Merge Cells for Header
+  ws["!merges"] = [
+    { s: {r:0, c:0}, e: {r:0, c:6} }, // Title
+    { s: {r:ws_data.length-4, c:0}, e: {r:ws_data.length-4, c:6} },
+    { s: {r:ws_data.length-2, c:0}, e: {r:ws_data.length-2, c:6} },
+    { s: {r:ws_data.length-1, c:0}, e: {r:ws_data.length-1, c:6} }
+  ];
+  
+  // Page Setup for Printing (Fit to 1 Page)
+  ws["!pageSetup"] = { fitToWidth: 1, fitToHeight: 1, orientation: 'portrait' };
+  
+  // Create workbook and add sheet
+  const wb = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb, ws, "결보강계획서");
+  
+  XLSX.writeFile(wb, `결보강계획서_${new Date().getTime()}.xlsx`);
 });
 
 init();
