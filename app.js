@@ -379,7 +379,7 @@ function analyzeSwap(row, col, tdEl) {
       }
     }
   }
-  showModal("수업 교체 매칭 결과", partners, 'swap', myName, myPeriod, rawSubject);
+  showModal("수업 교체 매칭 결과", partners, 'swap', myName, myPeriod, rawSubject, row, col);
 }
 
 function analyzeCover(row, col, tdEl) {
@@ -396,10 +396,10 @@ function analyzeCover(row, col, tdEl) {
       partners.push({ name: fullData[r][0], pRow: r, pCol: col });
     }
   }
-  showModal("대강 매칭 결과", partners, 'cover', myName, myPeriod, rawSubject);
+  showModal("대강 매칭 결과", partners, 'cover', myName, myPeriod, rawSubject, row, col);
 }
 
-function showModal(title, partners, mode, myName, myPeriod, rawSubject) {
+function showModal(title, partners, mode, myName, myPeriod, rawSubject, row, col) {
   modalTitle.textContent = title;
   
   if (partners.length === 0) {
