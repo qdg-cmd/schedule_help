@@ -383,7 +383,7 @@ function showModal(title, partners, mode, myName, myPeriod, rawSubject) {
   
   if (partners.length === 0) {
     modalBody.innerHTML = `<div class="text-center text-muted py-4">가능한 교사가 없습니다.</div>`;
-    modal.classList.add("active");
+    modal.classList.remove("hidden");
     return;
   }
   
@@ -460,8 +460,12 @@ function showModal(title, partners, mode, myName, myPeriod, rawSubject) {
     });
   });
   
-  modal.classList.add("active");
+  modal.classList.remove("hidden");
 }
+
+btnCloseModal.addEventListener("click", () => {
+  modal.classList.add("hidden");
+});
 
 function generatePartnerTimetableHtml(teacherName) {
   let html = `<table class="table table-sm text-center" style="font-size: 0.85rem;">
