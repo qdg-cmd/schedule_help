@@ -1,0 +1,219 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>스마트 수업교체 도우미</title>
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css">
+  <link rel="stylesheet" href="./style.css">
+</head>
+<body>
+  <!-- 전역 비밀번호 화면 -->
+  <div id="auth-overlay" class="glass-panel overlay">
+    <div class="auth-card glass-panel text-center">
+      <h2 style="margin-bottom: 20px;"><i class="bi bi-shield-lock text-primary"></i> 수업교체 도우미</h2>
+      <p style="margin-bottom: 20px; color: var(--text-muted);">앱 접근을 위해 비밀번호를 입력해주세요.</p>
+      <div class="input-group" style="justify-content: center;">
+        <input type="password" id="app-password" class="glass-input" placeholder="비밀번호 입력">
+        <button id="btn-login" class="btn btn-primary">확인</button>
+      </div>
+      <div id="auth-error" class="error-text hidden mt-2">비밀번호가 일치하지 않습니다.</div>
+    </div>
+  </div>
+
+  <!-- 메인 레이아웃 -->
+  <div class="app-container hidden" id="main-app">
+    <!-- 사이드바 -->
+    <aside class="sidebar glass-panel">
+      <div class="sidebar-header">
+        <i class="bi bi-calendar2-week-fill text-primary"></i>
+        <h3>시간표 도우미</h3>
+      </div>
+      
+      <!-- 학기 전환 토글 -->
+      <div class="semester-selector" style="margin-bottom: 20px;">
+        <select id="semester-select" class="glass-select w-100">
+          <option value="1">1학기</option>
+          <option value="2">2학기</option>
+        </select>
+      </div>
+
+      <nav class="sidebar-nav">
+        <a href="#" class="nav-item active" data-target="tab-swap">
+          <i class="bi bi-arrow-left-right text-success"></i> 교체 찾기
+        </a>
+        <a href="#" class="nav-item" data-target="tab-cover">
+          <i class="bi bi-person-plus-fill text-info"></i> 대강 찾기
+        </a>
+        <a href="#" class="nav-item" data-target="tab-meeting">
+          <i class="bi bi-clock-history text-warning"></i> 협의회 시간
+        </a>
+        <a href="#" class="nav-item" data-target="tab-exclusion">
+          <i class="bi bi-dash-circle text-danger"></i> 교체 불가 설정
+        </a>
+        <a href="#" class="nav-item admin-nav" data-target="tab-admin">
+          <i class="bi bi-gear-fill text-secondary"></i> 데이터 관리
+        </a>
+      </nav>
+      
+      <div class="sidebar-footer">
+        <button id="btn-reset-local" class="btn btn-outline-danger btn-sm w-100">
+          <i class="bi bi-trash"></i> 내 설정 초기화
+        </button>
+      </div>
+    </aside>
+
+    <!-- 메인 컨텐츠 영역 -->
+    <main class="main-content">
+      <!-- 1. 교체 찾기 -->
+      <section id="tab-swap" class="tab-pane active">
+        <div class="content-header">
+          <h2><i class="bi bi-arrow-left-right text-success"></i> 교체 찾기</h2>
+          <p>내 수업을 클릭하여 양쪽 모두 공강인 시간대를 탐색하세요.</p>
+        </div>
+        <div class="search-bar glass-panel mb-3 d-flex align-center gap-2">
+          <i class="bi bi-search text-success"></i>
+          <input type="text" id="search-swap" class="glass-input flex-1" placeholder="내 이름 검색 (예: 홍길동)">
+        </div>
+        <div class="timetable-wrapper glass-panel" id="table-swap">
+          <div class="text-center py-5 text-muted">데이터를 불러오는 중입니다...</div>
+        </div>
+      </section>
+
+      <!-- 2. 대강 찾기 -->
+      <section id="tab-cover" class="tab-pane hidden">
+        <div class="content-header">
+          <h2><i class="bi bi-person-plus-fill text-info"></i> 대강 찾기</h2>
+          <p>내 수업을 클릭하여 해당 교시에 비어있는 대강 교사를 찾습니다.</p>
+        </div>
+        <div class="search-bar glass-panel mb-3 d-flex align-center gap-2">
+          <i class="bi bi-search text-info"></i>
+          <input type="text" id="search-cover" class="glass-input flex-1" placeholder="내 이름 검색 (예: 홍길동)">
+        </div>
+        <div class="timetable-wrapper glass-panel" id="table-cover">
+          <div class="text-center py-5 text-muted">데이터를 불러오는 중입니다...</div>
+        </div>
+      </section>
+
+      <!-- 3. 협의회 시간 -->
+      <section id="tab-meeting" class="tab-pane hidden">
+        <div class="content-header">
+          <h2><i class="bi bi-clock-history text-warning"></i> 협의회 시간</h2>
+          <p>참석할 교사를 선택하여 모두 공강인 시간을 찾습니다.</p>
+        </div>
+        <div class="meeting-layout d-flex gap-3 align-start">
+          <div class="teacher-list glass-panel" style="width: 250px;">
+            <input type="text" id="search-meeting-teacher" class="glass-input mb-2 w-100" placeholder="교사 검색...">
+            <div id="meeting-teacher-checklist" class="checklist-container border rounded p-2" style="height: 400px; overflow-y: auto; background: rgba(255,255,255,0.5);">
+              <!-- 교사 체크리스트 -->
+            </div>
+            <button id="btn-clear-meeting" class="btn btn-outline-danger btn-sm mt-2 w-100">선택 해제</button>
+          </div>
+          <div class="meeting-result flex-1">
+            <div class="glass-panel mb-3">
+              <div class="d-flex justify-between align-center mb-2">
+                <h3 class="m-0"><i class="bi bi-card-checklist text-primary"></i> 선택된 교사 시간표</h3>
+                <div>
+                  <button id="btn-find-meeting" class="btn btn-primary btn-sm me-2">공강 찾기</button>
+                  <button id="btn-copy-meeting" class="btn btn-success btn-sm"><i class="bi bi-clipboard"></i> 복사</button>
+                </div>
+              </div>
+              <div id="meeting-timetable-area" class="timetable-preview" style="max-height: 250px; overflow-y: auto;">
+                <div class="text-center py-3 text-muted">교사를 선택해주세요.</div>
+              </div>
+            </div>
+            <div id="meeting-result-area" class="glass-panel" style="min-height: 100px;">
+              교사를 2명 이상 선택한 후 [공강 찾기]를 누르세요.
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- 4. 교체 불가 설정 -->
+      <section id="tab-exclusion" class="tab-pane hidden">
+        <div class="content-header">
+          <h2><i class="bi bi-dash-circle text-danger"></i> 교체 불가 설정</h2>
+          <p class="text-warning font-bold">강사 등 대강 및 교체가 불가능한 시간을 설정하세요. (이 기기에만 저장됩니다)</p>
+        </div>
+        <div class="exclusion-controls glass-panel mb-3 d-flex align-center gap-2">
+          <select id="exclusion-teacher-select" class="glass-select" style="width: 200px;">
+            <option value="">-- 대상 교사 선택 --</option>
+          </select>
+          <div id="exclusion-day-buttons" class="day-buttons hidden d-flex gap-2">
+            <!-- 요일 버튼 -->
+          </div>
+          <button id="btn-clear-all-exclusions" class="btn btn-outline-danger btn-sm ms-auto">
+            <i class="bi bi-trash"></i> 전체 초기화
+          </button>
+        </div>
+        <div id="exclusion-grid-area" class="timetable-wrapper glass-panel mb-3" style="min-height: 150px;">
+          <div class="text-center py-4 text-muted">교사를 먼저 선택해 주세요.</div>
+        </div>
+        <div id="exclusion-summary" class="glass-panel text-sm text-muted">
+          설정된 교체 불가 내역이 없습니다.
+        </div>
+      </section>
+
+      <!-- 5. 데이터 관리 (관리자) -->
+      <section id="tab-admin" class="tab-pane hidden">
+        <div class="content-header">
+          <h2><i class="bi bi-gear-fill text-secondary"></i> 데이터 관리</h2>
+          <p>시간표 데이터를 엑셀로 업로드하거나 관리자 설정을 변경합니다.</p>
+        </div>
+        
+        <div id="admin-auth-area" class="glass-panel text-center py-5">
+          <h3 class="mb-3">관리자 인증</h3>
+          <div class="input-group mx-auto" style="max-width: 300px;">
+            <input type="password" id="admin-password-input" class="glass-input" placeholder="관리자 비밀번호">
+            <button id="btn-admin-login" class="btn btn-primary">확인</button>
+          </div>
+          <div id="admin-error" class="error-text hidden mt-2">비밀번호가 틀렸습니다.</div>
+        </div>
+
+        <div id="admin-dashboard" class="hidden">
+          <div class="d-flex gap-3">
+            <div class="glass-panel flex-1">
+              <h3 class="mb-2"><i class="bi bi-file-earmark-excel text-success"></i> 엑셀 업로드</h3>
+              <p class="text-sm text-muted mb-3">현재 선택된 학기(<span class="current-semester-text font-bold text-primary"></span>)의 데이터를 덮어씁니다.</p>
+              <input type="file" id="excel-upload" accept=".xlsx, .xls" class="glass-input w-100 mb-3 d-block">
+              <button id="btn-upload-excel" class="btn btn-success w-100 mb-2"><i class="bi bi-cloud-arrow-up"></i> 데이터 업로드 및 반영</button>
+              <button id="btn-download-template" class="btn btn-outline-secondary w-100 text-sm"><i class="bi bi-download"></i> 양식 다운로드</button>
+            </div>
+            
+            <div class="glass-panel flex-1">
+              <h3 class="mb-2"><i class="bi bi-key text-warning"></i> 관리자 비밀번호 변경</h3>
+              <p class="text-sm text-muted mb-3">새로운 비밀번호를 입력하고 변경을 누르세요.</p>
+              <div class="input-group">
+                <input type="password" id="new-admin-password" class="glass-input" placeholder="새 비밀번호">
+                <button id="btn-change-admin-pwd" class="btn btn-warning">변경</button>
+              </div>
+            </div>
+          </div>
+          
+          <div class="glass-panel mt-3 text-center">
+             <h3 class="text-danger mb-2"><i class="bi bi-exclamation-triangle"></i> 위험 구역</h3>
+             <button id="btn-delete-all-data" class="btn btn-outline-danger">현재 학기 데이터 전체 삭제</button>
+          </div>
+        </div>
+      </section>
+    </main>
+  </div>
+
+  <!-- 결과 모달 -->
+  <div id="result-modal" class="modal-overlay hidden">
+    <div class="modal-content glass-panel">
+      <div class="modal-header d-flex justify-between align-center mb-3 pb-2 border-bottom">
+        <h4 id="modal-title" class="m-0 font-bold">매칭 결과</h4>
+        <button id="btn-close-modal" class="btn btn-sm btn-outline-secondary"><i class="bi bi-x-lg"></i></button>
+      </div>
+      <div id="modal-body" class="modal-body">
+        <!-- 결과 내용 -->
+      </div>
+    </div>
+  </div>
+
+  <!-- 엑셀 파싱 라이브러리 -->
+  <script src="https://cdn.sheetjs.com/xlsx-0.20.1/package/dist/xlsx.full.min.js"></script>
+  <script type="module" src="./app.js"></script>
+</body>
+</html>
