@@ -33,7 +33,7 @@ body {
   overflow: hidden;
 }
 
-/* 유틸리티 클래스 */
+/* ?�틸리티 ?�래??*/
 .hidden { display: none !important; }
 .text-primary { color: var(--primary-color) !important; }
 .text-success { color: var(--success-color) !important; }
@@ -67,7 +67,7 @@ body {
 .py-5 { padding-top: 3rem; padding-bottom: 3rem; }
 .border-bottom { border-bottom: 1px solid var(--glass-border); }
 
-/* Glassmorphism 기본 패널 */
+/* Glassmorphism 기본 ?�널 */
 .glass-panel {
   background: var(--glass-bg);
   backdrop-filter: blur(10px);
@@ -78,7 +78,7 @@ body {
   padding: 1rem;
 }
 
-/* 입력 폼 요소 */
+/* ?�력 ???�소 */
 .glass-input, .glass-select {
   background: rgba(255, 255, 255, 0.7);
   border: 1px solid rgba(255, 255, 255, 0.8);
@@ -145,7 +145,7 @@ body {
 .btn-icon { background: transparent; border: none; font-size: 1.2rem; cursor: pointer; color: var(--text-muted); }
 .btn-icon:hover { color: var(--dark-color); }
 
-/* 오버레이 */
+/* ?�버?�이 */
 .overlay {
   position: fixed;
   top: 0; left: 0; width: 100%; height: 100%;
@@ -163,7 +163,7 @@ body {
 }
 .error-text { color: var(--danger-color); font-size: 0.85rem; }
 
-/* 메인 레이아웃 (사이드바 + 컨텐츠) */
+/* 메인 ?�이?�웃 (?�이?�바 + 컨텐�? */
 .app-container {
   display: flex;
   height: 100vh;
@@ -171,7 +171,7 @@ body {
   gap: 1rem;
 }
 
-/* 사이드바 */
+/* ?�이?�바 */
 .sidebar {
   width: 250px;
   display: flex;
@@ -221,7 +221,7 @@ body {
   margin-top: 1rem;
 }
 
-/* 메인 컨텐츠 영역 */
+/* 메인 컨텐�??�역 */
 .main-content {
   flex: 1;
   display: flex;
@@ -254,7 +254,7 @@ body {
   font-size: 0.95rem;
 }
 
-/* 시간표 래퍼 및 테이블 */
+/* ?�간???�퍼 �??�이�?*/
 .timetable-wrapper {
   flex: 1;
   overflow: auto;
@@ -311,7 +311,7 @@ body {
   text-decoration: line-through;
 }
 
-/* 검색결과 하이라이트 */
+/* 검?�결�??�이?�이??*/
 .my-row-highlight td {
   border-top: 3px solid var(--primary-color) !important;
   border-bottom: 3px solid var(--primary-color) !important;
@@ -325,7 +325,7 @@ body {
   border-right: 3px solid var(--primary-color) !important;
 }
 
-/* 요일 배경색 */
+/* ?�일 배경??*/
 .day-mon { background: rgba(255, 235, 238, 0.7); }
 .day-tue { background: rgba(255, 243, 224, 0.7); }
 .day-wed { background: rgba(232, 245, 233, 0.7); }
@@ -360,7 +360,7 @@ body {
 }
 .modal-header {
   position: sticky;
-  top: -30px; /* 모달 패딩 상쇄 */
+  top: -30px; /* 모달 ?�딩 ?�쇄 */
   background: white;
   z-index: 100;
   padding-top: 30px;
