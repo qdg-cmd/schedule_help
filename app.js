@@ -310,10 +310,8 @@ function highlightRow(containerId, kw) {
     let nameTd = tr.querySelector('td:first-child');
     if (kw !== "" && nameTd.innerText.includes(kw)) {
       tr.classList.add("my-row-highlight");
-      tr.style.backgroundColor = "rgba(255, 193, 7, 0.2)";
     } else {
       tr.classList.remove("my-row-highlight");
-      tr.style.backgroundColor = "";
     }
   });
 }
@@ -476,9 +474,16 @@ function buildPreviewTableSwap(myName, pName, row, col, pRow, pCol, rawSubject, 
   let pt = `<div class="table-responsive"><table class="table table-sm table-bordered text-center align-middle bg-white" style="table-layout: fixed; width: 100%; font-size: 0.75rem;">
     <thead class="table-light"><tr><th style="width: 60px;">교사</th>`;
   
+  let dayClasses = [];
   for(let j = 1; j < headerRow.length; j++) {
+    let hStr = headerRow[j];
+    let dCls = hStr.includes("월") ? "day-mon" : hStr.includes("화") ? "day-tue" :
+               hStr.includes("수") ? "day-wed" : hStr.includes("목") ? "day-thu" :
+               hStr.includes("금") ? "day-fri" : "";
+    let bCls = (j > 1 && j < headerRow.length - 1 && hStr.replace(/[0-9]/g, '') !== headerRow[j+1].replace(/[0-9]/g, '')) ? "day-border" : (j === headerRow.length -1 ? "day-border" : "");
+    dayClasses[j] = `${dCls} ${bCls}`;
     let thClass = (j === col || j === pCol) ? 'bg-warning text-dark' : '';
-    pt += `<th class="${thClass}">${headerRow[j]}</th>`;
+    pt += `<th class="${dayClasses[j]} ${thClass}">${headerRow[j]}</th>`;
   }
   pt += `</tr></thead><tbody><tr><td class="font-bold bg-light">${myName}</td>`;
   
@@ -494,7 +499,7 @@ function buildPreviewTableSwap(myName, pName, row, col, pRow, pCol, rawSubject, 
     let v = isFree(fullData[pRow][j]) ? "공강" : formatSubject(fullData[pRow][j]);
     if (j === col) pt += `<td style="background:var(--primary-color); color:white; font-weight:bold;">공강</td>`;
     else if (j === pCol) pt += `<td style="background:var(--danger-color); color:white; font-weight:bold;">${formatSubject(pSubject)}</td>`;
-    else pt += `<td>${isFree(fullData[pRow][j]) ? "" : v}</td>`;
+    else pt += `<td class="${dayClasses[j]}">${isFree(fullData[pRow][j]) ? "" : v}</td>`;
   }
   return pt + `</tr></tbody></table></div>`;
 }
@@ -503,23 +508,30 @@ function buildPreviewTableCover(myName, pName, row, pRow, col, rawSubject) {
   let pt = `<div class="table-responsive"><table class="table table-sm table-bordered text-center align-middle bg-white" style="table-layout: fixed; width: 100%; font-size: 0.75rem;">
     <thead class="table-light"><tr><th style="width: 60px;">교사</th>`;
     
+  let dayClasses = [];
   for(let j = 1; j < headerRow.length; j++) {
+    let hStr = headerRow[j];
+    let dCls = hStr.includes("월") ? "day-mon" : hStr.includes("화") ? "day-tue" :
+               hStr.includes("수") ? "day-wed" : hStr.includes("목") ? "day-thu" :
+               hStr.includes("금") ? "day-fri" : "";
+    let bCls = (j > 1 && j < headerRow.length - 1 && hStr.replace(/[0-9]/g, '') !== headerRow[j+1].replace(/[0-9]/g, '')) ? "day-border" : (j === headerRow.length -1 ? "day-border" : "");
+    dayClasses[j] = `${dCls} ${bCls}`;
     let thClass = (j === col) ? 'bg-warning text-dark' : '';
-    pt += `<th class="${thClass}">${headerRow[j]}</th>`;
+    pt += `<th class="${dayClasses[j]} ${thClass}">${headerRow[j]}</th>`;
   }
   pt += `</tr></thead><tbody><tr><td class="font-bold bg-light">${myName}</td>`;
   
   for(let j = 1; j < headerRow.length; j++) {
     let v = isFree(fullData[row][j]) ? "" : formatSubject(fullData[row][j]);
     if (j === col) pt += `<td style="background:var(--danger-color); color:white; font-weight:bold;">${formatSubject(rawSubject)}</td>`;
-    else pt += `<td>${v}</td>`;
+    else pt += `<td class="${dayClasses[j]}">${v}</td>`;
   }
   pt += `</tr><tr><td class="font-bold bg-light">${pName}</td>`;
   
   for(let j = 1; j < headerRow.length; j++) {
     let v = isFree(fullData[pRow][j]) ? "" : formatSubject(fullData[pRow][j]);
     if (j === col) pt += `<td style="background:var(--primary-color); color:white; font-weight:bold;">공강</td>`;
-    else pt += `<td>${v}</td>`;
+    else pt += `<td class="${dayClasses[j]}">${v}</td>`;
   }
   return pt + `</tr></tbody></table></div>`;
 }
@@ -872,6 +884,107 @@ window.removeFromCart = (id) => {
   renderCartTab();
 };
 
+function parseSubjectForHwp(subjectString) {
+  if (!subjectString) return "";
+  let str = String(subjectString).trim();
+  let match = str.match(/^(\d)(\d{2})\s*(.+)$/);
+  if (match) {
+    let grade = match[1];
+    let classNum = parseInt(match[2], 10);
+    let subj = match[3];
+    return `${grade}학년 ${classNum}반 ${subj}`;
+  }
+  return str;
+}
+
+function renderCartTab() {
+  const cartList = document.getElementById("cart-list-area");
+  let cart = localState[`semester${currentSemester}`].cart;
+  if (!cart || cart.length === 0) {
+    cartList.innerHTML = `<div class="text-center py-5 text-muted">장바구니가 비어 있습니다. 매칭 결과에서 내역을 담아주세요.</div>`;
+    return;
+  }
+  
+  let html = `
+    <div class="mb-3 text-end">
+      <button class="btn btn-sm btn-outline-primary" onclick="copyHwpTable()"><i class="bi bi-clipboard-check"></i> 한글 양식 복사하기</button>
+      <p class="text-muted text-sm mt-1">※ '한글 양식 복사하기' 버튼을 누른 후, 한글(HWP)에 붙여넣기(Ctrl+V) 하세요.</p>
+    </div>
+    <div id="hwp-table-container" style="padding: 20px; background: white; color: black; border: 1px solid #ccc;">
+      <div style="font-size: 16pt; font-weight: bold; text-align: center; margin-bottom: 20px;">결강으로 인한 보강 계획</div>
+      <table style="width: 100%; border-collapse: collapse; text-align: center; font-size: 11pt; border: 2px solid black;">
+        <thead>
+          <tr>
+            <th style="border: 1px solid black; padding: 8px; width: 15%; font-weight: bold;">결강교사</th>
+            <th style="border: 1px solid black; padding: 8px; width: 10%; font-weight: bold;">일자</th>
+            <th style="border: 1px solid black; padding: 8px; width: 10%; font-weight: bold;">교시</th>
+            <th style="border: 1px solid black; padding: 8px; width: 25%; font-weight: bold;">수업</th>
+            <th style="border: 1px solid black; padding: 8px; width: 40%; font-weight: bold;">보강 (교체 / 대강) 계획</th>
+          </tr>
+        </thead>
+        <tbody>
+  `;
+  
+  cart.forEach((c) => {
+    let parsedMySubj = parseSubjectForHwp(c.mySubject);
+    let mySubjStr = parsedMySubj ? parsedMySubj : c.mySubject;
+    let dayStr = c.myPeriod.replace(/[0-9\s]/g, '');
+    let periodStr = c.myPeriod.replace(/[^0-9]/g, '');
+    let dateStr = "(  월  일)";
+    
+    if (c.type === "swap") {
+      let parsedPSubj = parseSubjectForHwp(c.partnerSubject);
+      let pSubjStr = parsedPSubj ? parsedPSubj : c.partnerSubject;
+      let pDayStr = c.partnerPeriod.replace(/[0-9\s]/g, '');
+      let pPeriodStr = c.partnerPeriod.replace(/[^0-9]/g, '');
+      let pDateStr = "(  월  일)";
+      
+      html += `
+        <tr>
+          <td style="border: 1px solid black; padding: 8px;" rowspan="2">${c.myName}</td>
+          <td style="border: 1px solid black; padding: 8px;">${dayStr}요일<br>${dateStr}</td>
+          <td style="border: 1px solid black; padding: 8px;">${periodStr}</td>
+          <td style="border: 1px solid black; padding: 8px;">${mySubjStr}</td>
+          <td style="border: 1px solid black; padding: 8px;">수업교체 ↔ ${c.partnerName} (${pDayStr}요일 ${pPeriodStr}교시)</td>
+        </tr>
+        <tr>
+          <td style="border: 1px solid black; padding: 8px;">${pDayStr}요일<br>${pDateStr}</td>
+          <td style="border: 1px solid black; padding: 8px;">${pPeriodStr}</td>
+          <td style="border: 1px solid black; padding: 8px;">${pSubjStr}</td>
+          <td style="border: 1px solid black; padding: 8px;">수업교체 ↔ ${c.partnerName} (${dayStr}요일 ${periodStr}교시)</td>
+        </tr>
+      `;
+    } else {
+      html += `
+        <tr>
+          <td style="border: 1px solid black; padding: 8px;">${c.myName}</td>
+          <td style="border: 1px solid black; padding: 8px;">${dayStr}요일<br>${dateStr}</td>
+          <td style="border: 1px solid black; padding: 8px;">${periodStr}</td>
+          <td style="border: 1px solid black; padding: 8px;">${mySubjStr}</td>
+          <td style="border: 1px solid black; padding: 8px;">대강 → ${c.partnerName}</td>
+        </tr>
+      `;
+    }
+  });
+  
+  html += `</tbody></table></div>`;
+  cartList.innerHTML = html;
+}
+
+window.copyHwpTable = () => {
+  const container = document.getElementById("hwp-table-container");
+  if (!container) return;
+  const range = document.createRange();
+  range.selectNode(container);
+  window.getSelection().removeAllRanges();
+  window.getSelection().addRange(range);
+  try {
+    document.execCommand('copy');
+    alert("한글 양식이 복사되었습니다. Ctrl+V로 붙여넣으세요.");
+  } catch (err) { alert("복사 실패"); }
+  window.getSelection().removeAllRanges();
+};
+
 document.getElementById("btn-clear-cart").addEventListener("click", () => {
   if(confirm("장바구니를 비우시겠습니까?")) {
     localState[`semester${currentSemester}`].cart = [];
@@ -880,28 +993,6 @@ document.getElementById("btn-clear-cart").addEventListener("click", () => {
   }
 });
 
-function renderCartTab() {
-  const cart = localState[`semester${currentSemester}`].cart;
-  const container = document.getElementById("cart-list-area");
-  
-  if (!cart || cart.length === 0) {
-    container.innerHTML = `<div class="text-center py-5 text-muted">장바구니가 비어 있습니다. 매칭 결과에서 내역을 담아주세요.</div>`;
-    return;
-  }
-  
-  let html = `<table class="table" style="min-width:700px;">
-    <thead><tr>
-      <th>종류</th><th>원수업 교사</th><th>교체/대강 대상</th><th>나의 수업 시간</th><th>상대방 수업 시간</th><th>관리</th>
-    </tr></thead><tbody>`;
-    
-  cart.forEach(item => {
-    let typeBadge = item.type === 'swap' ? '<span class="badge bg-success" style="padding:4px;border-radius:4px;color:white;background:var(--success-color)">교체</span>' : '<span class="badge bg-info" style="padding:4px;border-radius:4px;color:white;background:var(--info-color)">대강</span>';
-    
-    html += `<tr>
-      <td>${typeBadge}</td>
-      <td class="font-bold">${item.myName}</td>
-      <td class="text-primary font-bold">${item.partnerName}</td>
-      <td>${item.myPeriod}<br><small class="text-muted">${item.mySubject}</small></td>
       <td>${item.type === 'swap' ? item.partnerPeriod + '<br><small class="text-muted">' + item.partnerSubject + '</small>' : '-'}</td>
       <td><button class="btn btn-sm btn-outline-danger" onclick="removeFromCart('${item.id}')">삭제</button></td>
     </tr>`;
