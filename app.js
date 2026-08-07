@@ -521,8 +521,15 @@ btnAdminLogin.addEventListener("click", async () => {
       sessionStorage.setItem("adminAuth", "true");
       document.getElementById("admin-login-area").classList.add("hidden");
       document.getElementById("admin-dashboard").classList.remove("hidden");
+      const errorEl = document.getElementById("admin-error");
+      if (errorEl) errorEl.classList.add("hidden");
     } else {
-      alert("비밀번호가 틀렸습니다.");
+      const errorEl = document.getElementById("admin-error");
+      if (errorEl) {
+        errorEl.classList.remove("hidden");
+      } else {
+        alert("비밀번호가 틀렸습니다.");
+      }
     }
   } catch(e) {
     alert("오류 발생: " + e.message);
