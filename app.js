@@ -91,8 +91,8 @@ async function init() {
   if (saved) {
     try {
       let parsed = JSON.parse(saved);
-      if (!parsed.semester1.cart) parsed.semester1.cart = [];
-      if (!parsed.semester2.cart) parsed.semester2.cart = [];
+      if (parsed.semester1 && !parsed.semester1.cart) parsed.semester1.cart = [];
+      if (parsed.semester2 && !parsed.semester2.cart) parsed.semester2.cart = [];
       if (!parsed.semesterCutoff) parsed.semesterCutoff = "08-10";
       localState = { ...localState, ...parsed };
     } catch (e) {

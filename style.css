@@ -380,6 +380,10 @@ body {
 .bg-primary { background: var(--primary-color); color: white; }
 .bg-info { background: var(--info-color); color: white; }
 
+@media (min-width: 768px) {
+  .d-md-none { display: none !important; }
+}
+
 @media (max-width: 768px) {
   .app-container { flex-direction: column; }
   .sidebar { width: 100%; flex-direction: row; flex-wrap: wrap; justify-content: space-between; padding: 1rem; }
