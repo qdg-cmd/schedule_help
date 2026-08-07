@@ -268,19 +268,18 @@
 
   <!-- 결과 모달 -->
   <div id="result-modal" class="modal-overlay">
-    <div id="modal-content" class="modal-content glass-panel" style="max-width: 95vw; width: 1400px;">
-      <div class="modal-header d-flex justify-between align-center mb-3 pb-2 border-bottom">
-        <h4 id="modal-title" class="m-0 font-bold">매칭 결과</h4>
-        <button id="btn-close-modal" class="btn btn-sm btn-outline-secondary"><i class="bi bi-x-lg"></i></button>
+    <div class="modal-content p-0" style="overflow: hidden; max-width: 95vw; width: 1400px;">
+      <div class="modal-header d-flex justify-between align-center" style="background-color: #198754; color: white; padding: 15px 20px; border-bottom: none; margin: 0; position: static;">
+        <h3 id="modal-title" class="m-0 text-white" style="font-size: 1.2rem; font-weight: bold;"><i class="bi bi-arrow-return-left"></i> 수업 교체 가능 매칭 결과 & 미리보기</h3>
+        <button class="btn-icon text-white" id="btn-close-modal" style="opacity: 0.8;"><i class="bi bi-x-lg"></i></button>
       </div>
-      <div id="modal-body" class="modal-body">
-        <!-- 결과 내용 -->
+      <div class="modal-body p-4" id="modal-body" style="background-color: #f8f9fa; max-height: 80vh; overflow-y: auto;">
       </div>
     </div>
   </div>
 
   <!-- 엑셀 파싱 및 스타일 서식 라이브러리 (xlsx-js-style) -->
   <script src="https://cdn.jsdelivr.net/npm/xlsx-js-style@1.2.0/dist/xlsx.bundle.js"></script>
-  <script type="module" src="app.js?v=8"></script>
+  <script type="module" src="app.js?v=9"></script>
 </body>
 </html>

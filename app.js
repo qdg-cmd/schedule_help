@@ -391,45 +391,72 @@ function showModal(title, partners, mode, myName, myPeriod, rawSubject) {
   
   let html = `<div class="d-flex flex-column gap-3">`;
   partners.forEach((p, idx) => {
-    let summary = '';
-    if (mode === 'swap') {
-      summary = `
-        <div class="glass-panel" style="background: rgba(13, 110, 253, 0.05); border-color: var(--primary-color);">
-          <h4 class="text-primary mb-2 d-flex justify-between align-center">
-            <span><i class="bi bi-check-circle-fill"></i> ${p.name} 선생님과 교체 가능</span>
-            <button class="btn btn-sm btn-outline-primary btn-add-cart" data-type="swap" data-myname="${myName}" data-myperiod="${myPeriod}" data-mysubj="${rawSubject}" data-pname="${p.name}" data-pperiod="${p.pPeriod}" data-psubj="${p.pSubject}">장바구니 담기</button>
-          </h4>
-          <div class="text-center font-bold" style="font-size: 1.1rem; margin-bottom: 10px;">
-            나의 <span class="text-danger">${myPeriod} [${rawSubject}]</span> ↔ ${p.name}T의 <span class="text-primary">${p.pPeriod} [${p.pSubject}]</span>
+    let cardHtml = `
+      <div class="glass-panel" style="border: 1px solid #ccc; border-radius: 8px; padding: 15px; background: white;">
+        <h5 class="text-success font-bold mb-3"><i class="bi bi-check-circle-fill"></i> ${p.name} 선생님과 ${mode === 'swap' ? '교체' : '대강'} 가능</h5>
+        
+        <div class="d-flex justify-between align-center mb-3" style="background-color: #eef2ff; border: 1px solid #c7d2fe; border-radius: 8px; padding: 10px 20px;">
+          <div class="flex-1 text-center font-bold" style="font-size: 1.1rem;">
+            나의 <span class="text-danger">${myPeriod} [${rawSubject}]</span> ↔ 
+            ${mode === 'swap' ? `${p.name}T의 <span class="text-primary">${p.pPeriod} [${p.pSubject}]</span>` : `<span class="text-primary">${p.name} 선생님</span>께`} 
+            ${mode === 'swap' ? '교체' : '대강'} 요청
           </div>
-          <div class="text-center">
-            <button class="btn btn-sm btn-secondary btn-toggle-timetable" data-target="tt-swap-${idx}">상대방 시간표 보기</button>
-          </div>
-          <div id="tt-swap-${idx}" class="partner-timetable-container hidden">
-            ${generatePartnerTimetableHtml(p.name)}
-          </div>
+          <button class="btn btn-sm btn-primary btn-add-cart ms-3" style="min-width: 120px;" 
+                  data-type="${mode}" data-myname="${myName}" data-myperiod="${myPeriod}" data-mysubj="${rawSubject}" 
+                  data-pname="${p.name}" data-pperiod="${p.pPeriod || ''}" data-psubj="${p.pSubject || ''}">
+            <i class="bi bi-cart-plus"></i> 장바구니 담기
+          </button>
         </div>
-      `;
-    } else {
-      summary = `
-        <div class="glass-panel" style="background: rgba(13, 110, 253, 0.05); border-color: var(--primary-color);">
-          <h4 class="text-primary mb-2 d-flex justify-between align-center">
-            <span><i class="bi bi-check-circle-fill"></i> ${p.name} 선생님</span>
-            <button class="btn btn-sm btn-outline-info btn-add-cart" data-type="cover" data-myname="${myName}" data-myperiod="${myPeriod}" data-mysubj="${rawSubject}" data-pname="${p.name}" data-pperiod="" data-psubj="">장바구니 담기</button>
-          </h4>
-          <div class="text-center font-bold" style="font-size: 1.1rem; margin-bottom: 10px;">
-            나의 <span class="text-danger">${myPeriod} [${rawSubject}]</span> ↔ <span class="text-primary">${p.name} 선생님</span>께 대강 요청
-          </div>
-          <div class="text-center">
-            <button class="btn btn-sm btn-secondary btn-toggle-timetable" data-target="tt-cover-${idx}">상대방 시간표 보기</button>
-          </div>
-          <div id="tt-cover-${idx}" class="partner-timetable-container hidden">
-            ${generatePartnerTimetableHtml(p.name)}
-          </div>
+        
+        <div style="overflow-x: auto;">
+          <table class="table table-sm table-bordered text-center" style="font-size: 0.8rem; min-width: 1500px; margin-bottom: 0;">
+            <thead class="bg-light">
+              <tr>
+                <th style="width: 70px;">교사</th>
+                ${headerRow.slice(1).map(h => `<th>${h}</th>`).join('')}
+              </tr>
+            </thead>
+            <tbody>
+              <!-- 나의 시간표 -->
+              <tr>
+                <td class="font-bold bg-light" style="vertical-align: middle;">${myName}</td>
+                ${headerRow.slice(1).map(h => {
+                  let subj = getTeacherSubject(myName, h) || "";
+                  let display = isFree(subj) ? "" : formatSubject(subj);
+                  let cellStyle = "";
+                  
+                  if (h === myPeriod) {
+                    cellStyle = "background-color: #dc3545 !important; color: white !important; font-weight: bold;";
+                  } else if (mode === 'swap' && h === p.pPeriod) {
+                    cellStyle = "background-color: #0d6efd !important; color: white !important; font-weight: bold;";
+                    display = "공강";
+                  }
+                  return `<td style="${cellStyle}">${display}</td>`;
+                }).join('')}
+              </tr>
+              <!-- 상대방 시간표 -->
+              <tr>
+                <td class="font-bold bg-light" style="vertical-align: middle;">${p.name}</td>
+                ${headerRow.slice(1).map(h => {
+                  let subj = getTeacherSubject(p.name, h) || "";
+                  let display = isFree(subj) ? "" : formatSubject(subj);
+                  let cellStyle = "";
+                  
+                  if (h === myPeriod) {
+                    cellStyle = "background-color: #0d6efd !important; color: white !important; font-weight: bold;";
+                    display = "공강";
+                  } else if (mode === 'swap' && h === p.pPeriod) {
+                    cellStyle = "background-color: #dc3545 !important; color: white !important; font-weight: bold;";
+                  }
+                  return `<td style="${cellStyle}">${display}</td>`;
+                }).join('')}
+              </tr>
+            </tbody>
+          </table>
         </div>
-      `;
-    }
-    html += summary;
+      </div>
+    `;
+    html += cardHtml;
   });
   html += `</div>`;
   modalBody.innerHTML = html;
@@ -448,19 +475,7 @@ function showModal(title, partners, mode, myName, myPeriod, rawSubject) {
     });
   });
 
-  modalBody.querySelectorAll(".btn-toggle-timetable").forEach(btn => {
-    btn.addEventListener("click", () => {
-      const targetId = btn.dataset.target;
-      const targetDiv = document.getElementById(targetId);
-      if (targetDiv.classList.contains("hidden")) {
-        targetDiv.classList.remove("hidden");
-        btn.textContent = "상대방 시간표 접기";
-      } else {
-        targetDiv.classList.add("hidden");
-        btn.textContent = "상대방 시간표 보기";
-      }
-    });
-  });
+  // (Timetable toggles removed since they are now always visible)
   
   modal.classList.add("active");
 }
@@ -492,10 +507,11 @@ function generatePartnerTimetableHtml(teacherName) {
   return html;
 }
 
-function getTeacherSubject(name, period, dayIdx) {
+function getTeacherSubject(name, periodStr) {
   const row = fullData.find(r => r[0] === name);
   if (!row) return null;
-  const colIndex = (dayIdx - 1) * 7 + period;
+  const colIndex = headerRow.indexOf(periodStr);
+  if (colIndex === -1) return null;
   return row[colIndex] || null;
 }
 
@@ -625,14 +641,29 @@ function updateMeetingPreview() {
     return;
   }
   
-  let previewHtml = `<div class="d-flex flex-column gap-3">`;
+  let previewHtml = `<div style="overflow-x: auto;">
+    <table class="table table-sm table-bordered text-center" style="font-size: 0.8rem; min-width: 1500px; background-color: white;">
+      <thead class="bg-light">
+        <tr>
+          <th style="width: 70px; vertical-align: middle;">교사</th>
+          ${headerRow.slice(1).map(h => `<th style="vertical-align: middle;">${h}</th>`).join('')}
+        </tr>
+      </thead>
+      <tbody>`;
+      
   for (let t of selected) {
-    previewHtml += `<div class="glass-panel">
-      <h5 class="font-bold text-primary mb-2"><i class="bi bi-person-circle"></i> ${t} 선생님</h5>
-      ${generatePartnerTimetableHtml(t)}
-    </div>`;
+    previewHtml += `<tr>
+      <td class="font-bold bg-light" style="vertical-align: middle;">${t}</td>
+      ${headerRow.slice(1).map((h, i) => {
+        let subj = getTeacherSubject(t, h) || "";
+        let display = isFree(subj) ? "" : formatSubject(subj);
+        let ex = isExcluded(t, i + 1) ? `<br><span class="text-danger" style="font-size: 0.7rem;">(불가)</span>` : "";
+        return `<td>${display}${ex}</td>`;
+      }).join('')}
+    </tr>`;
   }
-  previewHtml += `</div>`;
+  
+  previewHtml += `</tbody></table></div>`;
   meetingTimetableArea.innerHTML = previewHtml;
 }
 
