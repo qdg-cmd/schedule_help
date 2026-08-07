@@ -109,6 +109,16 @@ async function init() {
     }
   }
   
+  try {
+    const docSnap = await getDoc(doc(db, "settings", "general"));
+    if (docSnap.exists() && docSnap.data().semesterCutoff) {
+      localState.semesterCutoff = docSnap.data().semesterCutoff;
+      saveLocalState();
+    }
+  } catch(e) {
+    console.error("Firestore cutoff sync error:", e);
+  }
+  
   if (cutoffInput) cutoffInput.value = localState.semesterCutoff;
   autoSelectSemester();
   
@@ -352,6 +362,7 @@ document.addEventListener("click", (e) => {
     let col = parseInt(td.dataset.col);
     if (action === "analyzeSwap") analyzeSwap(row, col, td);
     if (action === "analyzeCover") analyzeCover(row, col, td);
+    if (action === "toggleExclusion") toggleExclusionCell(fullData[row][0], col);
   }
 });
 
@@ -517,6 +528,11 @@ btnCloseModal.addEventListener("click", () => {
   modal.classList.add("hidden");
 });
 
+window.addEventListener("keydown", (e) => {
+  if (e.key === "Escape" && !modal.classList.contains("hidden")) {
+    modal.classList.add("hidden");
+  }
+});
 
 // Admin Features
 btnAdminLogin.addEventListener("click", async () => {
@@ -538,13 +554,26 @@ btnAdminLogin.addEventListener("click", async () => {
   }
 });
 
+adminPwdInput.addEventListener("keyup", (e) => {
+  if (e.key === "Enter") btnAdminLogin.click();
+});
+
 if (btnSaveCutoff) {
-  btnSaveCutoff.addEventListener("click", () => {
+  btnSaveCutoff.addEventListener("click", async () => {
     if (cutoffInput.value.trim() === "") return;
     localState.semesterCutoff = cutoffInput.value.trim();
     saveLocalState();
-    alert("학기 전환 기준일이 저장되었습니다.");
+    try {
+      await setDoc(doc(db, "settings", "general"), { semesterCutoff: localState.semesterCutoff }, { merge: true });
+      alert("학기 전환 기준일이 저장되고 전체 기기에 동기화되었습니다.");
+    } catch(e) {
+      alert("저장 실패: " + e.message);
+    }
     autoSelectSemester();
+  });
+  
+  cutoffInput.addEventListener("keyup", (e) => {
+    if (e.key === "Enter") btnSaveCutoff.click();
   });
 }
 
@@ -559,6 +588,10 @@ document.getElementById("btn-change-admin-pwd").addEventListener("click", async 
   } catch(e) {
     alert("오류: " + e.message);
   }
+});
+
+document.getElementById("new-admin-password").addEventListener("keyup", (e) => {
+  if (e.key === "Enter") document.getElementById("btn-change-admin-pwd").click();
 });
 
 // Excel Upload
@@ -726,105 +759,34 @@ document.getElementById("btn-find-meeting").addEventListener("click", () => {
 
 // Exclusion Tab
 function renderExclusionTab() {
-  const select = document.getElementById("exclusion-teacher-select");
-  let html = `<option value="">-- 대상 교사 선택 --</option>`;
-  teachers.forEach(t => html += `<option value="${t}">${t}</option>`);
-  select.innerHTML = html;
+  const gridArea = document.getElementById("exclusion-grid-area");
+  gridArea.innerHTML = generateTableHtml("toggleExclusion");
   updateExclusionSummary();
 }
 
-document.getElementById("exclusion-teacher-select").addEventListener("change", (e) => {
-  const tName = e.target.value;
-  const gridArea = document.getElementById("exclusion-grid-area");
-  const dayBtns = document.getElementById("exclusion-day-buttons");
-  
-  if (!tName) {
-    gridArea.innerHTML = `<div class="text-center py-4 text-muted">교사를 먼저 선택해 주세요.</div>`;
-    dayBtns.classList.add("hidden");
-    return;
-  }
-  
-  dayBtns.classList.remove("hidden");
-  let exclusions = localState[`semester${currentSemester}`].exclusions;
-  if (!exclusions[tName]) exclusions[tName] = [];
-  
-  // Render day buttons
-  let uniqueDays = [...new Set(headerRow.slice(1).map(h => h.replace(/[0-9]/g, '').trim()))].filter(Boolean);
-  let btnHtml = `<span class="text-sm font-bold align-center d-flex">요일 전체 선택: </span>`;
-  uniqueDays.forEach(day => {
-    btnHtml += `<button class="btn btn-outline-secondary btn-sm" onclick="toggleDayExclusion('${tName}', '${day}')">${day}</button>`;
-  });
-  dayBtns.innerHTML = btnHtml;
-
-  renderExclusionGrid(tName);
-});
-
-window.toggleDayExclusion = (teacher, dayStr) => {
-  let exclusions = localState[`semester${currentSemester}`].exclusions;
-  let dayCols = headerRow.reduce((acc, h, i) => { if(h.includes(dayStr)) acc.push(i); return acc; }, []);
-  let allExcluded = dayCols.every(c => exclusions[teacher].includes(c));
-  
-  if (allExcluded) {
-    exclusions[teacher] = exclusions[teacher].filter(c => !dayCols.includes(c));
-  } else {
-    dayCols.forEach(c => { if (!exclusions[teacher].includes(c)) exclusions[teacher].push(c); });
-  }
-  saveLocalState();
-  renderExclusionGrid(teacher);
-  updateExclusionSummary();
-};
-
 window.toggleExclusionCell = (teacher, colIndex) => {
   let exclusions = localState[`semester${currentSemester}`].exclusions;
+  if (!exclusions[teacher]) exclusions[teacher] = [];
+  
   let idx = exclusions[teacher].indexOf(colIndex);
   if (idx > -1) exclusions[teacher].splice(idx, 1);
   else exclusions[teacher].push(colIndex);
   
   saveLocalState();
-  renderExclusionGrid(teacher);
-  updateExclusionSummary();
+  renderExclusionTab();
+  renderTimetables(); // Update main timetable as well
 };
-
-function renderExclusionGrid(tName) {
-  const gridArea = document.getElementById("exclusion-grid-area");
-  let exclusions = localState[`semester${currentSemester}`].exclusions;
-  let r = fullData.findIndex(row => row[0] === tName);
-  
-  let html = `<table class="table" style="min-width: 600px;"><thead><tr>`;
-  headerRow.slice(1).forEach(h => html += `<th>${h}</th>`);
-  html += `</tr></thead><tbody><tr>`;
-  
-  for (let c = 1; c < fullData[r].length; c++) {
-    let isEx = exclusions[tName].includes(c);
-    let val = isFree(fullData[r][c]) ? "공강" : formatSubject(fullData[r][c]);
-    let cls = isEx ? 'is-excluded' : '';
-    html += `<td class="is-clickable ${cls}" style="border:1px solid rgba(0,0,0,0.1);" onclick="toggleExclusionCell('${tName}', ${c})">${val}</td>`;
-  }
-  html += `</tr></tbody></table>`;
-  gridArea.innerHTML = html;
-  
-  renderTimetables();
-}
 
 function updateExclusionSummary() {
   const sumArea = document.getElementById("exclusion-summary");
-  const selectedTeacher = document.getElementById("exclusion-teacher-select").value;
+  let allExclusions = localState[`semester${currentSemester}`].exclusions;
   
-  let summaryHtml = ``;
-  if (selectedTeacher) {
-    let list = localState[`semester${currentSemester}`].exclusions[selectedTeacher] || [];
-    if (list.length === 0) {
-      summaryHtml = `<div class="text-muted">${selectedTeacher} 선생님은 설정된 교체 불가 시간이 없습니다.</div>`;
-    } else {
-      summaryHtml = `<div class="text-primary font-bold mb-2">${selectedTeacher} 교체 불가 내역:</div><div class="d-flex flex-wrap gap-2">`;
-      list.forEach(c => {
-        summaryHtml += `<span class="badge bg-danger">${headerRow[c]}</span>`;
-      });
-      summaryHtml += `</div>`;
-    }
-  } else {
-    summaryHtml = `<div class="text-muted">교사를 선택해주세요.</div>`;
+  let count = 0;
+  for (let t in allExclusions) {
+    if (allExclusions[t].length > 0) count += allExclusions[t].length;
   }
+  
+  let summaryHtml = `<div class="p-2 mb-2 font-bold text-primary">현재 총 <b>${count}건</b>의 교체 불가 내역이 설정되어 있습니다.</div>`;
   
   // Render overall Exclusion Grid View
   let gridHtml = `
@@ -839,7 +801,6 @@ function updateExclusionSummary() {
       <tbody>
   `;
   
-  let allExclusions = localState[`semester${currentSemester}`].exclusions;
   for (let period = 1; period <= 7; period++) {
     gridHtml += `<tr><td class="font-bold text-muted bg-light">${period}</td>`;
     for (let dayIdx = 1; dayIdx <= 5; dayIdx++) {
@@ -870,9 +831,7 @@ document.getElementById("btn-clear-all-exclusions").addEventListener("click", ()
   if (confirm("이 기기의 교체 불가 설정을 모두 초기화하시겠습니까?")) {
     localState[`semester${currentSemester}`].exclusions = {};
     saveLocalState();
-    const tName = document.getElementById("exclusion-teacher-select").value;
-    if (tName) renderExclusionGrid(tName);
-    updateExclusionSummary();
+    renderExclusionTab();
     renderTimetables();
   }
 });

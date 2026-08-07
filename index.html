@@ -175,12 +175,7 @@
           <p class="text-warning font-bold">강사 등 대강 및 교체가 불가능한 시간을 설정하세요. (이 기기에만 저장됩니다)</p>
         </div>
         <div class="exclusion-controls glass-panel mb-3 d-flex align-center gap-2">
-          <select id="exclusion-teacher-select" class="glass-select" style="width: 200px;">
-            <option value="">-- 대상 교사 선택 --</option>
-          </select>
-          <div id="exclusion-day-buttons" class="day-buttons hidden d-flex gap-2">
-            <!-- 요일 버튼 -->
-          </div>
+          <p class="m-0 flex-1 text-sm"><i class="bi bi-info-circle text-primary"></i> 표에서 교시를 클릭하면 해당 시간이 교체 불가로 설정(음영 처리)되며, 다시 클릭하면 해제됩니다.</p>
           <button id="btn-clear-all-exclusions" class="btn btn-outline-danger btn-sm ms-auto">
             <i class="bi bi-trash"></i> 전체 초기화
           </button>
@@ -269,7 +264,7 @@
 
   <!-- 결과 모달 -->
   <div id="result-modal" class="modal-overlay hidden">
-    <div class="modal-content glass-panel">
+    <div id="modal-content" class="modal-content glass-panel" style="max-width: 95vw; width: 1400px; padding: 15px;">
       <div class="modal-header d-flex justify-between align-center mb-3 pb-2 border-bottom">
         <h4 id="modal-title" class="m-0 font-bold">매칭 결과</h4>
         <button id="btn-close-modal" class="btn btn-sm btn-outline-secondary"><i class="bi bi-x-lg"></i></button>
