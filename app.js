@@ -15,7 +15,7 @@ const app = initializeApp(firebaseConfig);
 const db = getFirestore(app);
 
 // State
-let currentSemester = "1";
+let currentSemester = "1"; // default 1
 let fullData = [];
 let headerRow = [];
 let teachers = [];
@@ -471,7 +471,7 @@ function generatePartnerTimetableHtml(teacherName) {
     <thead>
       <tr>
         <th style="width: 40px;">교시</th>
-        ${['월','화','수','목','금'].map(d => `<th>${d}</th>`).join('')}
+        <th class="day-mon">월</th><th class="day-tue">화</th><th class="day-wed">수</th><th class="day-thu">목</th><th class="day-fri">금</th>
       </tr>
     </thead>
     <tbody>
@@ -480,10 +480,11 @@ function generatePartnerTimetableHtml(teacherName) {
     html += `<tr><td class="font-bold text-muted bg-light">${r}</td>`;
     for (let c = 1; c <= 5; c++) {
       let subj = getTeacherSubject(teacherName, r, c) || "";
+      let dCls = c===1 ? "day-mon" : c===2 ? "day-tue" : c===3 ? "day-wed" : c===4 ? "day-thu" : "day-fri";
       if (subj) {
-        html += `<td style="background:var(--primary-color);color:white;border-radius:4px;">${subj}</td>`;
+        html += `<td class="${dCls}" style="color:#000; font-weight:bold; border-radius:4px;">${subj}</td>`;
       } else {
-        html += `<td class="text-muted" style="background:#f8f9fa;border-radius:4px;">-</td>`;
+        html += `<td class="text-muted ${dCls}" style="border-radius:4px; opacity: 0.5;">-</td>`;
       }
     }
     html += `</tr>`;
@@ -602,19 +603,56 @@ function renderMeetingTab() {
 }
 
 // Exclusion Tab
-function renderExclusionTab() {
-  const select = document.getElementById("exclusion-teacher-select");
-    let cls = isEx ? 'is-excluded' : '';
-    html += `<td class="is-clickable ${cls}" style="border:1px solid rgba(0,0,0,0.1);" onclick="toggleExclusionCell('${tName}', ${c})">${val}</td>`;
+window.renderExclusionTab = function() {
+  const gridArea = document.getElementById("exclusion-grid-area");
+  if (!teachers || teachers.length === 0) {
+    gridArea.innerHTML = `<div class="text-center py-4 text-muted">데이터가 없습니다.</div>`;
+    return;
   }
-  html += `</tr></tbody></table>`;
+  
+  let html = `<table class="table table-sm text-center" style="font-size: 0.85rem;"><thead><tr><th>교사명</th>`;
+  for (let i = 1; i < headerRow.length; i++) {
+    html += `<th>${headerRow[i]}</th>`;
+  }
+  html += `</tr></thead><tbody>`;
+  
+  teachers.forEach(tName => {
+    let rowData = fullData.find(r => r[0] === tName);
+    if(!rowData) return;
+    
+    html += `<tr><td class="font-bold text-primary bg-light" style="vertical-align: middle;">${tName}</td>`;
+    let exclusions = localState[`semester${currentSemester}`].exclusions[tName] || [];
+    for (let i = 1; i < rowData.length; i++) {
+      let val = rowData[i] || "";
+      let isEx = exclusions.includes(i);
+      let cls = isEx ? 'is-excluded' : 'is-clickable';
+      html += `<td class="${cls}" style="border:1px solid rgba(0,0,0,0.1); cursor:pointer;" onclick="toggleExclusionCell('${tName}', ${i})">${val}</td>`;
+    }
+    html += `</tr>`;
+  });
+  
+  html += `</tbody></table>`;
   gridArea.innerHTML = html;
   
-  // Re-render timetables to reflect exclusion styles
-  renderTimetables();
-}
+  updateExclusionSummary();
+};
 
-function updateExclusionSummary() {
+window.toggleExclusionCell = function(tName, colIndex) {
+  if (!localState[`semester${currentSemester}`].exclusions[tName]) {
+    localState[`semester${currentSemester}`].exclusions[tName] = [];
+  }
+  let arr = localState[`semester${currentSemester}`].exclusions[tName];
+  if (arr.includes(colIndex)) {
+    arr.splice(arr.indexOf(colIndex), 1);
+  } else {
+    arr.push(colIndex);
+  }
+  saveLocalState();
+  renderExclusionTab();
+  renderTimetables();
+};
+
+window.updateExclusionSummary = function() {
   const sumArea = document.getElementById("exclusion-summary");
   let exclusions = localState[`semester${currentSemester}`].exclusions;
   let count = 0;
@@ -628,15 +666,13 @@ function updateExclusionSummary() {
   }
   
   sumArea.innerHTML = count === 0 ? `<div class="text-muted">설정된 교체 불가 내역이 없습니다.</div>` : html;
-}
+};
 
 document.getElementById("btn-clear-all-exclusions").addEventListener("click", () => {
   if (confirm("이 기기의 교체 불가 설정을 모두 초기화하시겠습니까?")) {
     localState[`semester${currentSemester}`].exclusions = {};
     saveLocalState();
-    const tName = document.getElementById("exclusion-teacher-select").value;
-    if (tName) renderExclusionGrid(tName);
-    updateExclusionSummary();
+    renderExclusionTab();
     renderTimetables();
   }
 });
@@ -694,24 +730,48 @@ function renderCartTab() {
     return;
   }
   
-  let html = `<table class="table" style="min-width:700px;">
-    <thead><tr>
-      <th>종류</th><th>원수업 교사</th><th>교체/대강 대상</th><th>나의 수업 시간</th><th>상대방 수업 시간</th><th>관리</th>
-    </tr></thead><tbody>`;
+  let html = `
+    <div class="mb-3 d-flex justify-between align-center">
+      <p class="text-primary m-0"><i class="bi bi-info-circle"></i> 아래 표를 드래그해서 한글(HWP)에 그대로 복사-붙여넣기 하세요.</p>
+    </div>
+    <div style="overflow-x: auto; background: white; padding: 15px; border-radius: 8px;">
+      <table border="1" style="border-collapse: collapse; text-align: center; width: 100%; border: 1px solid black; color: black; font-size: 11pt; font-family: 'Malgun Gothic', sans-serif;">
+        <thead>
+          <tr style="background-color: #f2f2f2;">
+            <th style="padding: 8px; border: 1px solid black;">구분</th>
+            <th style="padding: 8px; border: 1px solid black;">원수업교사</th>
+            <th style="padding: 8px; border: 1px solid black;">결강(변경전) 일시 및 과목</th>
+            <th style="padding: 8px; border: 1px solid black;">보강교사</th>
+            <th style="padding: 8px; border: 1px solid black;">보강(변경후) 일시 및 과목</th>
+            <th style="padding: 8px; border: 1px solid black;" class="no-print">관리</th>
+          </tr>
+        </thead>
+        <tbody>
+  `;
     
   cart.forEach(item => {
-    let typeBadge = item.type === 'swap' ? '<span class="badge bg-success" style="padding:4px;border-radius:4px;color:white;background:var(--success-color)">교체</span>' : '<span class="badge bg-info" style="padding:4px;border-radius:4px;color:white;background:var(--info-color)">대강</span>';
+    let typeStr = item.type === 'swap' ? '교체' : '대강';
+    
+    let myInfo = `${item.myPeriod} / ${item.mySubject}`;
+    let partnerInfo = item.type === 'swap' 
+      ? `${item.partnerPeriod} / ${item.partnerSubject}` 
+      : `${item.myPeriod} / ${item.mySubject}`; // 대강인 경우 동일한 시간과 과목
     
     html += `<tr>
-      <td>${typeBadge}</td>
-      <td class="font-bold">${item.myName}</td>
-      <td class="text-primary font-bold">${item.partnerName}</td>
-      <td>${item.myPeriod}<br><small class="text-muted">${item.mySubject}</small></td>
-      <td>${item.type === 'swap' ? item.partnerPeriod + '<br><small class="text-muted">' + item.partnerSubject + '</small>' : '-'}</td>
-      <td><button class="btn btn-sm btn-outline-danger" onclick="removeFromCart('${item.id}')">삭제</button></td>
+      <td style="padding: 8px; border: 1px solid black;">${typeStr}</td>
+      <td style="padding: 8px; border: 1px solid black; font-weight: bold;">${item.myName}</td>
+      <td style="padding: 8px; border: 1px solid black;">${myInfo}</td>
+      <td style="padding: 8px; border: 1px solid black; font-weight: bold; color: blue;">${item.partnerName}</td>
+      <td style="padding: 8px; border: 1px solid black;">${partnerInfo}</td>
+      <td style="padding: 8px; border: 1px solid black;" class="no-print">
+        <button class="btn btn-sm btn-danger" onclick="removeFromCart('${item.id}')">삭제</button>
+      </td>
     </tr>`;
   });
-  html += `</tbody></table>`;
+  
+  html += `</tbody></table></div>`;
+  
+  // Add a style tag to hide the .no-print column when actually copying or printing if needed, though simple selection works best.
   container.innerHTML = html;
 }
 

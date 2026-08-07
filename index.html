@@ -35,11 +35,11 @@
   <div id="auth-overlay" class="glass-panel overlay">
     <div class="auth-card glass-panel text-center">
       <h2 style="margin-bottom: 20px;"><i class="bi bi-shield-lock text-primary"></i> 수업교체 도우미</h2>
-      <p style="margin-bottom: 20px; color: var(--text-muted);">앱 접근을 위해 비밀번호를 입력해주세요.</p>
-      <div class="input-group" style="justify-content: center; margin-top: 1.5rem; gap: 8px;">
-        <input type="password" id="app-password" class="glass-input" placeholder="비밀번호 입력" style="border: 2px solid var(--primary-color); padding: 0.75rem 1.2rem; font-size: 1.1rem; border-radius: 8px; text-align: center; box-shadow: 0 4px 12px rgba(13, 110, 253, 0.15);">
-        <button id="btn-login" class="btn btn-primary" style="padding: 0.75rem 1.5rem; font-size: 1.1rem; border-radius: 8px; box-shadow: 0 4px 12px rgba(13, 110, 253, 0.2);">확인</button>
-      </div>
+        <p style="margin-bottom: 20px; color: var(--text-muted);">사용을 위해 비밀번호를 입력하세요.</p>
+        <div class="input-group" style="justify-content: center; margin-top: 1.5rem; gap: 10px; display: flex; flex-direction: column; align-items: center;">
+          <input type="password" id="app-password" class="glass-input" placeholder="비밀번호 입력" style="border: 2px solid var(--primary-color); padding: 1rem 1.5rem; font-size: 1.2rem; border-radius: 8px; text-align: center; box-shadow: inset 0 2px 4px rgba(0,0,0,0.1), 0 4px 12px rgba(13, 110, 253, 0.15); width: 80%; max-width: 300px; background-color: rgba(255,255,255,0.9); color: #333; outline: none; transition: all 0.3s ease;">
+          <button id="btn-login" class="btn btn-primary" style="padding: 0.75rem 1.5rem; font-size: 1.1rem; border-radius: 8px; box-shadow: 0 4px 12px rgba(13, 110, 253, 0.2); width: 80%; max-width: 300px; margin-top: 5px;">로그인</button>
+        </div>
       <div id="auth-error" class="error-text hidden mt-3" style="font-size: 1rem; font-weight: bold;">비밀번호가 일치하지 않습니다.</div>
     </div>
   </div>
@@ -215,14 +215,15 @@
           <p>시간표 데이터를 엑셀로 업로드하거나 관리자 설정을 변경합니다.</p>
         </div>
         
-        <div id="admin-auth-area" class="glass-panel text-center py-5">
-          <h3 class="mb-3">관리자 인증</h3>
-          <div class="input-group mx-auto" style="max-width: 300px;">
-            <input type="password" id="admin-password-input" class="glass-input" placeholder="관리자 비밀번호">
-            <button id="btn-admin-login" class="btn btn-primary">확인</button>
+        <div id="admin-login-area" class="glass-panel text-center py-5">
+            <h3 class="mb-3">관리자 로그인</h3>
+            <p style="margin-bottom: 20px; color: var(--text-muted);">설정 변경을 위해 관리자 비밀번호를 입력하세요.</p>
+            <div class="input-group" style="justify-content: center; margin-top: 1.5rem; gap: 10px; display: flex; flex-direction: column; align-items: center;">
+              <input type="password" id="admin-password-input" class="glass-input" placeholder="관리자 비밀번호 입력" style="border: 2px solid var(--secondary-color); padding: 1rem 1.5rem; font-size: 1.2rem; border-radius: 8px; text-align: center; box-shadow: inset 0 2px 4px rgba(0,0,0,0.1), 0 4px 12px rgba(108, 117, 125, 0.15); width: 80%; max-width: 300px; background-color: rgba(255,255,255,0.9); color: #333; outline: none; transition: all 0.3s ease;">
+              <button id="btn-admin-login" class="btn btn-secondary" style="padding: 0.75rem 1.5rem; font-size: 1.1rem; border-radius: 8px; box-shadow: 0 4px 12px rgba(108, 117, 125, 0.2); width: 80%; max-width: 300px; margin-top: 5px;">관리자 로그인</button>
+            </div>
+            <p id="admin-login-error" class="text-danger mt-3 hidden text-sm" style="font-size: 1rem; font-weight: bold;">비밀번호가 일치하지 않습니다.</p>
           </div>
-          <div id="admin-error" class="error-text hidden mt-2">비밀번호가 틀렸습니다.</div>
-        </div>
 
         <div id="admin-dashboard" class="hidden">
           <div class="glass-panel mb-4">
