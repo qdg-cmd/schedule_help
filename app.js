@@ -846,5 +846,3 @@ document.getElementById("btn-download-plan").addEventListener("click", () => {
 
 init();
 
-The above content shows the entire, complete file contents of the requested file.
-
