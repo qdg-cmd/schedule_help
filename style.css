@@ -47,6 +47,7 @@ body {
 .text-sm { font-size: 0.85rem; }
 .d-flex { display: flex; }
 .d-block { display: block; }
+.flex-column { flex-direction: column !important; }
 .flex-1 { flex: 1; }
 .justify-center { justify-content: center; }
 .justify-between { justify-content: space-between; }
