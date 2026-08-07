@@ -593,10 +593,10 @@ document.getElementById("btn-upload-excel").addEventListener("click", () => {
 function renderMeetingTab() {
   const clContainer = document.getElementById("meeting-teacher-checklist");
   const selected = localState[`semester${currentSemester}`].selectedTeachers || [];
-  let html = `<div class="d-flex flex-wrap gap-2">`;
+  let html = `<div class="d-flex flex-column gap-2" style="max-height: 500px; overflow-y: auto; overflow-x: hidden; padding-right: 5px;">`;
   teachers.forEach((t, i) => {
     let isActive = selected.includes(t) ? "active btn-primary text-white" : "btn-outline-primary";
-    html += `<button class="btn btn-sm ${isActive} toggle-teacher-btn" data-val="${t}">${t}</button>`;
+    html += `<button class="btn btn-sm ${isActive} toggle-teacher-btn text-start" data-val="${t}">${t}</button>`;
   });
   html += `</div>`;
   clContainer.innerHTML = html;
@@ -625,23 +625,14 @@ function updateMeetingPreview() {
     return;
   }
   
-  let ths = "";
-  selected.forEach(t => ths += `<th>${t}</th>`);
-  let previewHtml = `<table class="table table-sm text-center" style="font-size: 0.8rem;">
-    <thead class="bg-light"><tr><th>교시</th>${ths}</tr></thead><tbody>`;
-    
-  for (let i = 1; i < headerRow.length; i++) {
-    previewHtml += `<tr><td class="font-bold">${headerRow[i]}</td>`;
-    for (let t of selected) {
-      let row = fullData.find(r => r[0] === t);
-      let subj = row ? row[i] : "";
-      let disp = isFree(subj) ? "-" : formatSubject(subj);
-      let ex = isExcluded(t, i) ? "❌" : "";
-      previewHtml += `<td>${disp} <span class="text-danger">${ex}</span></td>`;
-    }
-    previewHtml += `</tr>`;
+  let previewHtml = `<div class="d-flex flex-column gap-3">`;
+  for (let t of selected) {
+    previewHtml += `<div class="glass-panel">
+      <h5 class="font-bold text-primary mb-2"><i class="bi bi-person-circle"></i> ${t} 선생님</h5>
+      ${generatePartnerTimetableHtml(t)}
+    </div>`;
   }
-  previewHtml += `</tbody></table>`;
+  previewHtml += `</div>`;
   meetingTimetableArea.innerHTML = previewHtml;
 }
 
