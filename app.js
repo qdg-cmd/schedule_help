@@ -296,18 +296,14 @@ function renderTimetables() {
 
 function highlightRow(containerId, kw) {
   kw = kw.trim();
-  document.querySelectorAll(`#${containerId} .teacher-card`).forEach(card => {
-    let name = card.dataset.name || "";
-    if (kw !== "" && name.includes(kw)) {
-      card.style.display = "block";
-      card.style.borderColor = "var(--primary-color)";
-      card.style.boxShadow = "0 0 10px rgba(13, 110, 253, 0.2)";
-    } else if (kw !== "") {
-      card.style.display = "none";
+  document.querySelectorAll(`#${containerId} tbody tr`).forEach(tr => {
+    let nameTd = tr.querySelector('td:first-child');
+    if (kw !== "" && nameTd.innerText.includes(kw)) {
+      tr.classList.add("my-row-highlight");
+      tr.style.backgroundColor = "rgba(255, 193, 7, 0.2)";
     } else {
-      card.style.display = "block";
-      card.style.borderColor = "var(--glass-border)";
-      card.style.boxShadow = "none";
+      tr.classList.remove("my-row-highlight");
+      tr.style.backgroundColor = "";
     }
   });
 }
@@ -315,58 +311,35 @@ function highlightRow(containerId, kw) {
 function generateTableHtml(actionFunc) {
   if (fullData.length === 0) return "";
   
-  let html = `<div class="d-flex flex-column gap-4">`;
-  
-  // Group columns by day
-  let days = []; // [{ name: '월', cols: [1,2,3...] }]
-  let currentDay = "";
-  let currentCols = [];
-  
-  for (let j = 1; j < headerRow.length; j++) {
-    let dayName = headerRow[j].replace(/[0-9\s]/g, '');
-    if (dayName !== currentDay) {
-      if (currentDay !== "") days.push({ name: currentDay, cols: currentCols });
-      currentDay = dayName;
-      currentCols = [j];
-    } else {
-      currentCols.push(j);
-    }
+  let html = `<table class="table"><thead><tr>`;
+  let dayClasses = [];
+
+  for (let j = 0; j < headerRow.length; j++) {
+    let hStr = headerRow[j];
+    let dCls = hStr.includes("월") ? "day-mon" : hStr.includes("화") ? "day-tue" :
+               hStr.includes("수") ? "day-wed" : hStr.includes("목") ? "day-thu" :
+               hStr.includes("금") ? "day-fri" : "";
+    let bCls = (j > 0 && j < headerRow.length - 1 && hStr.replace(/[0-9]/g, '') !== headerRow[j+1].replace(/[0-9]/g, '')) ? "day-border" : (j === headerRow.length -1 ? "day-border" : "");
+    dayClasses[j] = `${dCls} ${bCls}`;
+    html += `<th class="${dayClasses[j]}">${hStr}</th>`;
   }
-  if (currentDay !== "") days.push({ name: currentDay, cols: currentCols });
+  html += `</tr></thead><tbody>`;
 
   for (let i = 1; i < fullData.length; i++) {
-    let tName = fullData[i][0];
-    html += `<div class="teacher-card glass-panel p-3" data-name="${tName}" style="border: 2px solid var(--glass-border); border-radius: 12px;">
-      <h3 class="mb-3 text-primary"><i class="bi bi-person-badge"></i> ${tName} 선생님</h3>
-      <div class="vertical-timetable">`;
-      
-    days.forEach(day => {
-      let dCls = day.name.includes("월") ? "day-mon" : day.name.includes("화") ? "day-tue" :
-                 day.name.includes("수") ? "day-wed" : day.name.includes("목") ? "day-thu" :
-                 day.name.includes("금") ? "day-fri" : "";
-                 
-      html += `<div class="vertical-day-card ${dCls}">
-        <div class="vertical-day-header">${day.name}요일</div>
-        <div class="vertical-day-body">`;
-        
-      day.cols.forEach(j => {
-        let val = fullData[i][j];
-        let pNum = headerRow[j].replace(/[^0-9]/g, '');
-        let extraClass = isExcluded(tName, j) ? "is-excluded" : "is-clickable";
-        let displayVal = isFree(val) ? "<span class='text-muted'>공강</span>" : formatSubject(val);
-        
-        html += `<div class="vertical-period-row ${extraClass}" data-action="${actionFunc}" data-row="${i}" data-col="${j}">
-          <div class="vertical-period-num">${pNum}교시</div>
-          <div class="vertical-period-subj font-bold">${displayVal}</div>
-        </div>`;
-      });
-      
-      html += `</div></div>`;
-    });
-    
-    html += `</div></div>`;
+    html += `<tr>`;
+    for (let j = 0; j < fullData[i].length; j++) {
+      let val = fullData[i][j];
+      if (j === 0) {
+        html += `<td class="text-nowrap" style="white-space:nowrap;">${val}</td>`;
+      } else {
+        let extraClass = isExcluded(fullData[i][0], j) ? "is-excluded" : "is-clickable";
+        let displayVal = isFree(val) ? "" : formatSubject(val);
+        html += `<td class="${dayClasses[j]} ${extraClass}" data-action="${actionFunc}" data-row="${i}" data-col="${j}">${displayVal}</td>`;
+      }
+    }
+    html += `</tr>`;
   }
-  html += `</div>`;
+  html += `</tbody></table>`;
   return html;
 }
 
@@ -489,70 +462,30 @@ function showModal(title, partners, mode, myName, myPeriod, rawSubject, row, col
 }
 
 function buildPreviewTableSwap(myName, pName, row, col, pRow, pCol, rawSubject, pSubject) {
-  let days = []; 
-  let currentDay = "";
-  let currentCols = [];
+  let pt = `<div class="table-responsive"><table class="table table-sm table-bordered text-center align-middle bg-white" style="table-layout: fixed; width: 100%; min-width: 900px; font-size: 0.8rem;">
+    <thead class="table-light"><tr><th style="width: 60px;">교사</th>`;
   
-  for (let j = 1; j < headerRow.length; j++) {
-    let dayName = headerRow[j].replace(/[0-9\s]/g, '');
-    if (dayName !== currentDay) {
-      if (currentDay !== "") days.push({ name: currentDay, cols: currentCols });
-      currentDay = dayName;
-      currentCols = [j];
-    } else {
-      currentCols.push(j);
-    }
+  for(let j = 1; j < headerRow.length; j++) {
+    let thClass = (j === col || j === pCol) ? 'bg-warning text-dark' : '';
+    pt += `<th class="${thClass}">${headerRow[j]}</th>`;
   }
-  if (currentDay !== "") days.push({ name: currentDay, cols: currentCols });
-
-  let html = `<div class="d-flex flex-column gap-3">`;
+  pt += `</tr></thead><tbody><tr><td class="font-bold bg-light">${myName}</td>`;
   
-  days.forEach(day => {
-    let dCls = day.name.includes("월") ? "day-mon" : day.name.includes("화") ? "day-tue" :
-               day.name.includes("수") ? "day-wed" : day.name.includes("목") ? "day-thu" :
-               day.name.includes("금") ? "day-fri" : "";
-               
-    html += `<div class="vertical-day-card ${dCls}">
-      <div class="vertical-day-header d-flex justify-between">
-        <span>${day.name}요일</span>
-        <span class="text-sm fw-normal">나(${myName}) vs 상대(${pName})</span>
-      </div>
-      <div class="vertical-day-body">`;
-      
-    day.cols.forEach(j => {
-      let pNum = headerRow[j].replace(/[^0-9]/g, '');
-      let myVal = fullData[row][j];
-      let pVal = fullData[pRow][j];
-      
-      let myDisplay = isFree(myVal) ? "<span class='text-muted'>공강</span>" : formatSubject(myVal);
-      let pDisplay = isFree(pVal) ? "<span class='text-muted'>공강</span>" : formatSubject(pVal);
-      
-      let myExtraCls = "";
-      
-      if (j === col) {
-        myDisplay = `<span style="color:var(--danger-color);">${formatSubject(rawSubject)} (변경전)</span>`;
-        pDisplay = `<span style="color:var(--primary-color);">공강 (변경후)</span>`;
-        myExtraCls = "bg-warning bg-opacity-25";
-      } else if (j === pCol) {
-        myDisplay = `<span style="color:var(--primary-color);">공강 (변경후)</span>`;
-        pDisplay = `<span style="color:var(--success-color);">${formatSubject(pSubject)} (변경전)</span>`;
-        myExtraCls = "bg-warning bg-opacity-25";
-      }
-      
-      html += `<div class="d-flex border-bottom ${myExtraCls}">
-        <div class="vertical-period-num">${pNum}교시</div>
-        <div class="flex-1 p-2 border-right text-center d-flex align-items-center justify-content-center">
-          ${myDisplay}
-        </div>
-        <div class="flex-1 p-2 text-center d-flex align-items-center justify-content-center">
-          ${pDisplay}
-        </div>
-      </div>`;
-    });
-    html += `</div></div>`;
-  });
-  html += `</div>`;
-  return html;
+  for(let j = 1; j < headerRow.length; j++) {
+    let v = isFree(fullData[row][j]) ? "공강" : formatSubject(fullData[row][j]);
+    if (j === col) pt += `<td style="background:var(--danger-color); color:white; font-weight:bold;">${formatSubject(rawSubject)}</td>`;
+    else if (j === pCol) pt += `<td style="background:var(--primary-color); color:white; font-weight:bold;">공강</td>`;
+    else pt += `<td>${isFree(fullData[row][j]) ? "" : v}</td>`;
+  }
+  pt += `</tr><tr><td class="font-bold bg-light">${pName}</td>`;
+  
+  for(let j = 1; j < headerRow.length; j++) {
+    let v = isFree(fullData[pRow][j]) ? "공강" : formatSubject(fullData[pRow][j]);
+    if (j === col) pt += `<td style="background:var(--primary-color); color:white; font-weight:bold;">공강</td>`;
+    else if (j === pCol) pt += `<td style="background:var(--danger-color); color:white; font-weight:bold;">${formatSubject(pSubject)}</td>`;
+    else pt += `<td>${isFree(fullData[pRow][j]) ? "" : v}</td>`;
+  }
+  return pt + `</tr></tbody></table></div>`;
 }
 
 function buildPreviewTableCover(myName, pName, row, pRow, col, rawSubject) {
