@@ -66,12 +66,15 @@
         <button id="btn-close-sidebar" class="btn btn-sm btn-icon d-md-none"><i class="bi bi-x-lg"></i></button>
       </div>
       
-      <!-- 학기 전환 토글 -->
       <div class="semester-selector" style="margin-bottom: 20px;">
-        <select id="semester-select" class="glass-select w-100">
-          <option value="1">1학기</option>
-          <option value="2">2학기</option>
-        </select>
+        <ul class="nav nav-pills mt-3" id="semester-tabs" style="display: flex; gap: 10px; list-style: none; padding: 0;">
+          <li class="nav-item-sem" style="flex: 1;">
+            <a class="nav-link semester-btn active" href="#" data-sem="1" style="display: block; text-align: center; padding: 8px; border-radius: 8px; border: 1px solid var(--primary-color); text-decoration: none; color: var(--primary-color);">1학기</a>
+          </li>
+          <li class="nav-item-sem" style="flex: 1;">
+            <a class="nav-link semester-btn" href="#" data-sem="2" style="display: block; text-align: center; padding: 8px; border-radius: 8px; border: 1px solid var(--primary-color); text-decoration: none; color: var(--primary-color);">2학기</a>
+          </li>
+        </ul>
       </div>
 
       <nav class="sidebar-nav">
@@ -264,7 +267,7 @@
   </div>
 
   <!-- 결과 모달 -->
-  <div id="result-modal" class="modal-overlay hidden">
+  <div id="result-modal" class="modal-overlay">
     <div id="modal-content" class="modal-content glass-panel" style="max-width: 95vw; width: 1400px;">
       <div class="modal-header d-flex justify-between align-center mb-3 pb-2 border-bottom">
         <h4 id="modal-title" class="m-0 font-bold">매칭 결과</h4>
@@ -278,6 +281,6 @@
 
   <!-- 엑셀 파싱 및 스타일 서식 라이브러리 (xlsx-js-style) -->
   <script src="https://cdn.jsdelivr.net/npm/xlsx-js-style@1.2.0/dist/xlsx.bundle.js"></script>
-  <script type="module" src="app.js?v=4"></script>
+  <script type="module" src="app.js?v=5"></script>
 </body>
 </html>

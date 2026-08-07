@@ -600,6 +600,102 @@ function renderMeetingTab() {
   clContainer.innerHTML = html;
 }
 
+document.addEventListener("change", (e) => {
+  if (e.target.classList.contains("chk-teacher")) {
+    let arr = localState[`semester${currentSemester}`].selectedTeachers || [];
+    if (e.target.checked) {
+      if (!arr.includes(e.target.value)) arr.push(e.target.value);
+    } else {
+      arr = arr.filter(v => v !== e.target.value);
+    }
+    localState[`semester${currentSemester}`].selectedTeachers = arr;
+    saveLocalState();
+  }
+});
+
+const btnFindMeeting = document.getElementById("btn-find-meeting");
+const btnClearMeeting = document.getElementById("btn-clear-meeting");
+const btnCopyMeeting = document.getElementById("btn-copy-meeting");
+const meetingTimetableArea = document.getElementById("meeting-timetable-area");
+const meetingResultArea = document.getElementById("meeting-result-area");
+
+if (btnFindMeeting) {
+  btnFindMeeting.addEventListener("click", () => {
+    const selected = localState[`semester${currentSemester}`].selectedTeachers || [];
+    if (selected.length < 2) {
+      alert("비교할 교사를 2명 이상 선택하세요.");
+      return;
+    }
+    
+    let commonFree = [];
+    for (let i = 1; i < headerRow.length; i++) {
+      let isAllFree = true;
+      for (let t of selected) {
+        let row = fullData.find(r => r[0] === t);
+        if (!row || !isFree(row[i]) || isExcluded(t, i)) {
+          isAllFree = false;
+          break;
+        }
+      }
+      if (isAllFree) {
+        commonFree.push(headerRow[i]);
+      }
+    }
+    
+    if (commonFree.length > 0) {
+      meetingResultArea.innerHTML = `<div class="alert alert-success m-0 font-bold">
+        <i class="bi bi-check-circle-fill"></i> 모두 공강인 시간: ${commonFree.join(", ")}
+      </div>`;
+    } else {
+      meetingResultArea.innerHTML = `<div class="alert alert-warning m-0 font-bold">
+        <i class="bi bi-exclamation-triangle-fill"></i> 모두 공강인 시간이 없습니다.
+      </div>`;
+    }
+    
+    let ths = "";
+    selected.forEach(t => ths += `<th>${t}</th>`);
+    let previewHtml = `<table class="table table-sm text-center" style="font-size: 0.8rem;">
+      <thead class="bg-light"><tr><th>교시</th>${ths}</tr></thead><tbody>`;
+      
+    for (let i = 1; i < headerRow.length; i++) {
+      let isCommon = commonFree.includes(headerRow[i]);
+      let trCls = isCommon ? 'bg-success bg-opacity-10' : '';
+      previewHtml += `<tr class="${trCls}"><td class="font-bold">${headerRow[i]}</td>`;
+      for (let t of selected) {
+        let row = fullData.find(r => r[0] === t);
+        let subj = row ? row[i] : "";
+        let disp = isFree(subj) ? "-" : formatSubject(subj);
+        let ex = isExcluded(t, i) ? "❌" : "";
+        previewHtml += `<td>${disp} <span class="text-danger">${ex}</span></td>`;
+      }
+      previewHtml += `</tr>`;
+    }
+    previewHtml += `</tbody></table>`;
+    meetingTimetableArea.innerHTML = previewHtml;
+  });
+}
+
+if (btnClearMeeting) {
+  btnClearMeeting.addEventListener("click", () => {
+    localState[`semester${currentSemester}`].selectedTeachers = [];
+    saveLocalState();
+    renderMeetingTab();
+    meetingTimetableArea.innerHTML = `<div class="text-center py-3 text-muted">교사를 선택해주세요.</div>`;
+    meetingResultArea.innerHTML = `교사를 2명 이상 선택한 후 [공강 찾기]를 누르세요.`;
+  });
+}
+
+if (btnCopyMeeting) {
+  btnCopyMeeting.addEventListener("click", () => {
+    const selected = localState[`semester${currentSemester}`].selectedTeachers || [];
+    if (selected.length < 2) return alert("먼저 공강을 찾아주세요.");
+    const text = meetingResultArea.innerText;
+    navigator.clipboard.writeText(`[협의회 공강 시간]\n참여: ${selected.join(", ")}\n결과: ${text.trim()}`)
+      .then(() => alert("복사되었습니다."))
+      .catch(e => alert("복사 실패: " + e));
+  });
+}
+
 // Exclusion Tab
 window.renderExclusionTab = function() {
   const gridArea = document.getElementById("exclusion-grid-area");
@@ -654,14 +750,22 @@ window.updateExclusionSummary = function() {
   const sumArea = document.getElementById("exclusion-summary");
   let exclusions = localState[`semester${currentSemester}`].exclusions;
   let count = 0;
-  let html = `<h4 class="mb-2 font-bold"><i class="bi bi-list-check"></i> 설정된 내역 (자동 저장됨)</h4>`;
+  
+  let html = `<h4 class="mb-2 font-bold"><i class="bi bi-list-check"></i> 설정된 내역 (자동 저장됨)</h4>
+              <table class="table table-sm table-bordered mt-2 text-center" style="font-size: 0.9rem; background-color: #fff;">
+                <thead class="bg-light"><tr><th style="width:120px;">교사명</th><th>교체 불가 교시</th></tr></thead>
+                <tbody>`;
   
   for (let t in exclusions) {
     if (exclusions[t] && exclusions[t].length > 0) {
-      html += `<div class="mb-1"><span class="btn btn-danger btn-sm p-1" style="font-size:0.7rem;">${t}</span> : ${exclusions[t].sort((a,b) => a - b).map(c => headerRow[c]).join(', ')}</div>`;
+      html += `<tr>
+                <td class="font-bold text-danger align-middle">${t}</td>
+                <td class="text-start align-middle">${exclusions[t].sort((a,b) => a - b).map(c => headerRow[c]).join(', ')}</td>
+               </tr>`;
       count++;
     }
   }
+  html += `</tbody></table>`;
   
   sumArea.innerHTML = count === 0 ? `<div class="text-muted">설정된 교체 불가 내역이 없습니다.</div>` : html;
 };
