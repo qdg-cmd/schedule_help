@@ -408,12 +408,12 @@ function showModal(title, partners, mode, myName, myPeriod, rawSubject) {
           </button>
         </div>
         
-        <div style="overflow-x: auto;">
-          <table class="table table-sm table-bordered text-center" style="font-size: 0.8rem; min-width: 1500px; margin-bottom: 0;">
+        <div style="overflow-x: hidden; width: 100%;">
+          <table class="table table-sm table-bordered text-center" style="font-size: 0.75rem; width: 100%; table-layout: fixed; margin-bottom: 0; word-break: keep-all;">
             <thead class="bg-light">
               <tr>
-                <th style="width: 70px;">교사</th>
-                ${headerRow.slice(1).map(h => `<th>${h}</th>`).join('')}
+                <th style="width: 50px;">교사</th>
+                ${headerRow.slice(1).map(h => `<th class="${getDayClass(h)}">${h}</th>`).join('')}
               </tr>
             </thead>
             <tbody>
@@ -431,7 +431,7 @@ function showModal(title, partners, mode, myName, myPeriod, rawSubject) {
                     cellStyle = "background-color: #0d6efd !important; color: white !important; font-weight: bold;";
                     display = "공강";
                   }
-                  return `<td style="${cellStyle}">${display}</td>`;
+                  return `<td class="${getDayClass(h)}" style="${cellStyle}">${display}</td>`;
                 }).join('')}
               </tr>
               <!-- 상대방 시간표 -->
@@ -448,7 +448,7 @@ function showModal(title, partners, mode, myName, myPeriod, rawSubject) {
                   } else if (mode === 'swap' && h === p.pPeriod) {
                     cellStyle = "background-color: #dc3545 !important; color: white !important; font-weight: bold;";
                   }
-                  return `<td style="${cellStyle}">${display}</td>`;
+                  return `<td class="${getDayClass(h)}" style="${cellStyle}">${display}</td>`;
                 }).join('')}
               </tr>
             </tbody>
@@ -513,6 +513,15 @@ function getTeacherSubject(name, periodStr) {
   const colIndex = headerRow.indexOf(periodStr);
   if (colIndex === -1) return null;
   return row[colIndex] || null;
+}
+
+function getDayClass(periodStr) {
+  if (periodStr.startsWith("월")) return "day-mon";
+  if (periodStr.startsWith("화")) return "day-tue";
+  if (periodStr.startsWith("수")) return "day-wed";
+  if (periodStr.startsWith("목")) return "day-thu";
+  if (periodStr.startsWith("금")) return "day-fri";
+  return "";
 }
 
 btnCloseModal.addEventListener("click", () => {
@@ -641,12 +650,12 @@ function updateMeetingPreview() {
     return;
   }
   
-  let previewHtml = `<div style="overflow-x: auto;">
+  let previewHtml = `<div style="overflow-x: auto; width: 100%;">
     <table class="table table-sm table-bordered text-center" style="font-size: 0.8rem; min-width: 1500px; background-color: white;">
       <thead class="bg-light">
         <tr>
           <th style="width: 70px; vertical-align: middle;">교사</th>
-          ${headerRow.slice(1).map(h => `<th style="vertical-align: middle;">${h}</th>`).join('')}
+          ${headerRow.slice(1).map(h => `<th class="${getDayClass(h)}" style="vertical-align: middle;">${h}</th>`).join('')}
         </tr>
       </thead>
       <tbody>`;
@@ -658,7 +667,7 @@ function updateMeetingPreview() {
         let subj = getTeacherSubject(t, h) || "";
         let display = isFree(subj) ? "" : formatSubject(subj);
         let ex = isExcluded(t, i + 1) ? `<br><span class="text-danger" style="font-size: 0.7rem;">(불가)</span>` : "";
-        return `<td>${display}${ex}</td>`;
+        return `<td class="${getDayClass(h)}">${display}${ex}</td>`;
       }).join('')}
     </tr>`;
   }
