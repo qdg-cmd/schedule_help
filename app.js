@@ -473,7 +473,7 @@ function showModal(title, partners, mode, myName, myPeriod, rawSubject, row, col
 }
 
 function buildPreviewTableSwap(myName, pName, row, col, pRow, pCol, rawSubject, pSubject) {
-  let pt = `<div class="table-responsive"><table class="table table-sm table-bordered text-center align-middle bg-white" style="table-layout: fixed; width: 100%; min-width: 900px; font-size: 0.8rem;">
+  let pt = `<div class="table-responsive"><table class="table table-sm table-bordered text-center align-middle bg-white" style="table-layout: fixed; width: 100%; font-size: 0.75rem;">
     <thead class="table-light"><tr><th style="width: 60px;">교사</th>`;
   
   for(let j = 1; j < headerRow.length; j++) {
@@ -500,7 +500,7 @@ function buildPreviewTableSwap(myName, pName, row, col, pRow, pCol, rawSubject, 
 }
 
 function buildPreviewTableCover(myName, pName, row, pRow, col, rawSubject) {
-  let pt = `<div class="table-responsive"><table class="table table-sm table-bordered text-center align-middle bg-white" style="table-layout: fixed; width: 100%; min-width: 900px; font-size: 0.8rem;">
+  let pt = `<div class="table-responsive"><table class="table table-sm table-bordered text-center align-middle bg-white" style="table-layout: fixed; width: 100%; font-size: 0.75rem;">
     <thead class="table-light"><tr><th style="width: 60px;">교사</th>`;
     
   for(let j = 1; j < headerRow.length; j++) {
