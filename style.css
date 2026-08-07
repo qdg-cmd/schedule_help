@@ -10,10 +10,10 @@
   --light-color: #f8f9fa;
   --dark-color: #212529;
 
-  --bg-gradient: linear-gradient(135deg, #e0c3fc 0%, #8ec5fc 100%);
-  --glass-bg: rgba(255, 255, 255, 0.6);
-  --glass-border: rgba(255, 255, 255, 0.4);
-  --glass-shadow: 0 8px 32px 0 rgba(31, 38, 135, 0.15);
+  --bg-gradient: #f4f6f9; /* 배경 단순화 */
+  --glass-bg: #ffffff;
+  --glass-border: #e0e0e0;
+  --glass-shadow: 0 4px 12px 0 rgba(0, 0, 0, 0.05);
   
   --text-main: #333;
   --text-muted: #666;
@@ -28,7 +28,6 @@
 body {
   font-family: 'Pretendard', sans-serif;
   background: var(--bg-gradient);
-  background-attachment: fixed;
   color: var(--text-main);
   min-height: 100vh;
   overflow: hidden;
@@ -319,6 +318,73 @@ body {
   0% { transform: scale(1); }
   50% { transform: scale(1.05); }
   100% { transform: scale(1); }
+}
+
+/* 세로형 리스트 UI */
+.vertical-timetable {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+.vertical-day-card {
+  border: 1px solid var(--glass-border);
+  border-radius: 8px;
+  overflow: hidden;
+}
+.vertical-day-header {
+  padding: 0.5rem 1rem;
+  font-weight: bold;
+  border-bottom: 1px solid var(--glass-border);
+}
+.vertical-day-body {
+  display: flex;
+  flex-direction: column;
+}
+.vertical-period-row {
+  display: flex;
+  border-bottom: 1px solid var(--glass-border);
+  cursor: pointer;
+  transition: background 0.1s;
+}
+.vertical-period-row:last-child {
+  border-bottom: none;
+}
+.vertical-period-row:hover {
+  background-color: #f8f9fa;
+}
+.vertical-period-num {
+  width: 50px;
+  padding: 0.5rem;
+  background: var(--light-color);
+  font-weight: bold;
+  text-align: center;
+  border-right: 1px solid var(--glass-border);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.vertical-period-subj {
+  flex: 1;
+  padding: 0.5rem 1rem;
+  display: flex;
+  align-items: center;
+}
+.vertical-period-row.is-excluded {
+  background: #f8d7da !important;
+  color: #842029 !important;
+  text-decoration: line-through;
+  pointer-events: none;
+}
+.vertical-period-row.is-selected {
+  background-color: rgba(13, 110, 253, 0.1);
+  border: 2px solid var(--primary-color);
+  font-weight: bold;
+}
+.vertical-period-row.is-partner {
+  background-color: rgba(25, 135, 84, 0.1);
+  border: 2px solid var(--success-color);
+  animation: pulse 1.5s infinite;
+  font-weight: bold;
 }
 
 /* 관리자 대시보드 */

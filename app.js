@@ -296,14 +296,18 @@ function renderTimetables() {
 
 function highlightRow(containerId, kw) {
   kw = kw.trim();
-  document.querySelectorAll(`#${containerId} tbody tr`).forEach(tr => {
-    let nameTd = tr.querySelector('td:first-child');
-    if (kw !== "" && nameTd.innerText.includes(kw)) {
-      tr.classList.add("my-row-highlight");
-      tr.style.backgroundColor = "rgba(255, 193, 7, 0.2)";
+  document.querySelectorAll(`#${containerId} .teacher-card`).forEach(card => {
+    let name = card.dataset.name || "";
+    if (kw !== "" && name.includes(kw)) {
+      card.style.display = "block";
+      card.style.borderColor = "var(--primary-color)";
+      card.style.boxShadow = "0 0 10px rgba(13, 110, 253, 0.2)";
+    } else if (kw !== "") {
+      card.style.display = "none";
     } else {
-      tr.classList.remove("my-row-highlight");
-      tr.style.backgroundColor = "";
+      card.style.display = "block";
+      card.style.borderColor = "var(--glass-border)";
+      card.style.boxShadow = "none";
     }
   });
 }
@@ -311,35 +315,58 @@ function highlightRow(containerId, kw) {
 function generateTableHtml(actionFunc) {
   if (fullData.length === 0) return "";
   
-  let html = `<table class="table"><thead><tr>`;
-  let dayClasses = [];
-
-  for (let j = 0; j < headerRow.length; j++) {
-    let hStr = headerRow[j];
-    let dCls = hStr.includes("월") ? "day-mon" : hStr.includes("화") ? "day-tue" :
-               hStr.includes("수") ? "day-wed" : hStr.includes("목") ? "day-thu" :
-               hStr.includes("금") ? "day-fri" : "";
-    let bCls = (j > 0 && j < headerRow.length - 1 && hStr.replace(/[0-9]/g, '') !== headerRow[j+1].replace(/[0-9]/g, '')) ? "day-border" : (j === headerRow.length -1 ? "day-border" : "");
-    dayClasses[j] = `${dCls} ${bCls}`;
-    html += `<th class="${dayClasses[j]}">${hStr}</th>`;
+  let html = `<div class="d-flex flex-column gap-4">`;
+  
+  // Group columns by day
+  let days = []; // [{ name: '월', cols: [1,2,3...] }]
+  let currentDay = "";
+  let currentCols = [];
+  
+  for (let j = 1; j < headerRow.length; j++) {
+    let dayName = headerRow[j].replace(/[0-9\s]/g, '');
+    if (dayName !== currentDay) {
+      if (currentDay !== "") days.push({ name: currentDay, cols: currentCols });
+      currentDay = dayName;
+      currentCols = [j];
+    } else {
+      currentCols.push(j);
+    }
   }
-  html += `</tr></thead><tbody>`;
+  if (currentDay !== "") days.push({ name: currentDay, cols: currentCols });
 
   for (let i = 1; i < fullData.length; i++) {
-    html += `<tr>`;
-    for (let j = 0; j < fullData[i].length; j++) {
-      let val = fullData[i][j];
-      if (j === 0) {
-        html += `<td class="text-nowrap" style="white-space:nowrap;">${val}</td>`;
-      } else {
-        let extraClass = isExcluded(fullData[i][0], j) ? "is-excluded" : "is-clickable";
-        let displayVal = isFree(val) ? "" : formatSubject(val);
-        html += `<td class="${dayClasses[j]} ${extraClass}" data-action="${actionFunc}" data-row="${i}" data-col="${j}">${displayVal}</td>`;
-      }
-    }
-    html += `</tr>`;
+    let tName = fullData[i][0];
+    html += `<div class="teacher-card glass-panel p-3" data-name="${tName}" style="border: 2px solid var(--glass-border); border-radius: 12px;">
+      <h3 class="mb-3 text-primary"><i class="bi bi-person-badge"></i> ${tName} 선생님</h3>
+      <div class="vertical-timetable">`;
+      
+    days.forEach(day => {
+      let dCls = day.name.includes("월") ? "day-mon" : day.name.includes("화") ? "day-tue" :
+                 day.name.includes("수") ? "day-wed" : day.name.includes("목") ? "day-thu" :
+                 day.name.includes("금") ? "day-fri" : "";
+                 
+      html += `<div class="vertical-day-card ${dCls}">
+        <div class="vertical-day-header">${day.name}요일</div>
+        <div class="vertical-day-body">`;
+        
+      day.cols.forEach(j => {
+        let val = fullData[i][j];
+        let pNum = headerRow[j].replace(/[^0-9]/g, '');
+        let extraClass = isExcluded(tName, j) ? "is-excluded" : "is-clickable";
+        let displayVal = isFree(val) ? "<span class='text-muted'>공강</span>" : formatSubject(val);
+        
+        html += `<div class="vertical-period-row ${extraClass}" data-action="${actionFunc}" data-row="${i}" data-col="${j}">
+          <div class="vertical-period-num">${pNum}교시</div>
+          <div class="vertical-period-subj font-bold">${displayVal}</div>
+        </div>`;
+      });
+      
+      html += `</div></div>`;
+    });
+    
+    html += `</div></div>`;
   }
-  html += `</tbody></table>`;
+  html += `</div>`;
   return html;
 }
 
@@ -462,30 +489,70 @@ function showModal(title, partners, mode, myName, myPeriod, rawSubject, row, col
 }
 
 function buildPreviewTableSwap(myName, pName, row, col, pRow, pCol, rawSubject, pSubject) {
-  let pt = `<div class="table-responsive"><table class="table table-sm table-bordered text-center align-middle bg-white" style="table-layout: fixed; width: 100%; min-width: 900px; font-size: 0.8rem;">
-    <thead class="table-light"><tr><th style="width: 60px;">교사</th>`;
+  let days = []; 
+  let currentDay = "";
+  let currentCols = [];
   
-  for(let j = 1; j < headerRow.length; j++) {
-    let thClass = (j === col || j === pCol) ? 'bg-warning text-dark' : '';
-    pt += `<th class="${thClass}">${headerRow[j]}</th>`;
+  for (let j = 1; j < headerRow.length; j++) {
+    let dayName = headerRow[j].replace(/[0-9\s]/g, '');
+    if (dayName !== currentDay) {
+      if (currentDay !== "") days.push({ name: currentDay, cols: currentCols });
+      currentDay = dayName;
+      currentCols = [j];
+    } else {
+      currentCols.push(j);
+    }
   }
-  pt += `</tr></thead><tbody><tr><td class="font-bold bg-light">${myName}</td>`;
+  if (currentDay !== "") days.push({ name: currentDay, cols: currentCols });
+
+  let html = `<div class="d-flex flex-column gap-3">`;
   
-  for(let j = 1; j < headerRow.length; j++) {
-    let v = isFree(fullData[row][j]) ? "공강" : formatSubject(fullData[row][j]);
-    if (j === col) pt += `<td style="background:var(--danger-color); color:white; font-weight:bold;">${formatSubject(rawSubject)}</td>`;
-    else if (j === pCol) pt += `<td style="background:var(--primary-color); color:white; font-weight:bold;">공강</td>`;
-    else pt += `<td>${isFree(fullData[row][j]) ? "" : v}</td>`;
-  }
-  pt += `</tr><tr><td class="font-bold bg-light">${pName}</td>`;
-  
-  for(let j = 1; j < headerRow.length; j++) {
-    let v = isFree(fullData[pRow][j]) ? "공강" : formatSubject(fullData[pRow][j]);
-    if (j === col) pt += `<td style="background:var(--primary-color); color:white; font-weight:bold;">공강</td>`;
-    else if (j === pCol) pt += `<td style="background:var(--danger-color); color:white; font-weight:bold;">${formatSubject(pSubject)}</td>`;
-    else pt += `<td>${isFree(fullData[pRow][j]) ? "" : v}</td>`;
-  }
-  return pt + `</tr></tbody></table></div>`;
+  days.forEach(day => {
+    let dCls = day.name.includes("월") ? "day-mon" : day.name.includes("화") ? "day-tue" :
+               day.name.includes("수") ? "day-wed" : day.name.includes("목") ? "day-thu" :
+               day.name.includes("금") ? "day-fri" : "";
+               
+    html += `<div class="vertical-day-card ${dCls}">
+      <div class="vertical-day-header d-flex justify-between">
+        <span>${day.name}요일</span>
+        <span class="text-sm fw-normal">나(${myName}) vs 상대(${pName})</span>
+      </div>
+      <div class="vertical-day-body">`;
+      
+    day.cols.forEach(j => {
+      let pNum = headerRow[j].replace(/[^0-9]/g, '');
+      let myVal = fullData[row][j];
+      let pVal = fullData[pRow][j];
+      
+      let myDisplay = isFree(myVal) ? "<span class='text-muted'>공강</span>" : formatSubject(myVal);
+      let pDisplay = isFree(pVal) ? "<span class='text-muted'>공강</span>" : formatSubject(pVal);
+      
+      let myExtraCls = "";
+      
+      if (j === col) {
+        myDisplay = `<span style="color:var(--danger-color);">${formatSubject(rawSubject)} (변경전)</span>`;
+        pDisplay = `<span style="color:var(--primary-color);">공강 (변경후)</span>`;
+        myExtraCls = "bg-warning bg-opacity-25";
+      } else if (j === pCol) {
+        myDisplay = `<span style="color:var(--primary-color);">공강 (변경후)</span>`;
+        pDisplay = `<span style="color:var(--success-color);">${formatSubject(pSubject)} (변경전)</span>`;
+        myExtraCls = "bg-warning bg-opacity-25";
+      }
+      
+      html += `<div class="d-flex border-bottom ${myExtraCls}">
+        <div class="vertical-period-num">${pNum}교시</div>
+        <div class="flex-1 p-2 border-right text-center d-flex align-items-center justify-content-center">
+          ${myDisplay}
+        </div>
+        <div class="flex-1 p-2 text-center d-flex align-items-center justify-content-center">
+          ${pDisplay}
+        </div>
+      </div>`;
+    });
+    html += `</div></div>`;
+  });
+  html += `</div>`;
+  return html;
 }
 
 function buildPreviewTableCover(myName, pName, row, pRow, col, rawSubject) {
@@ -957,68 +1024,154 @@ document.getElementById("btn-download-plan").addEventListener("click", () => {
     return alert("장바구니가 비어 있습니다.");
   }
   
-  // Create an Excel Sheet that fits on one page and mimics the HWpx form
   const ws_data = [];
   
-  // Header
-  ws_data.push(["결 보 강  계 획 서"]);
-  ws_data.push([""]); // Empty row
+  // Row 0-1: Title
+  ws_data.push(["결 보 강  계 획 서", "", "", "", "", "", "", "", "", "", "", "", "", ""]);
+  ws_data.push(["", "", "", "", "", "", "", "", "", "", "", "", "", ""]);
   
-  // Construct the table
-  ws_data.push(["구 분", "원수업교사", "과목 및 학반", "결강(변경전) 일시", "보강교사", "보강(변경후) 일시", "사 유"]);
+  // Row 2-3: 결재란
+  ws_data.push(["", "", "", "", "", "", "", "", "", "", "", "일과", "교육과정부장", "교감"]);
+  ws_data.push(["", "", "", "", "", "", "", "", "", "", "", "", "", ""]);
   
+  // Row 4: Blank
+  ws_data.push(["", "", "", "", "", "", "", "", "", "", "", "", "", ""]);
+  
+  // Row 5-8: 안내문
+  ws_data.push(["1. 결 강 일 : 20   년   월   일 부터  20   년   월   일 까지   (   ) 일", "", "", "", "", "", "", "", "", "", "", "", "", ""]);
+  ws_data.push(["2. 사   유 : 공무출장( ) 공가( ) 연가( ) 조퇴( ) 지참( ) 병가( )", "", "", "", "", "", "", "", "", "", "", "", "", ""]);
+  ws_data.push(["             기타(     , 사유 -         )", "", "", "", "", "", "", "", "", "", "", "", "", ""]);
+  ws_data.push(["3. 결강으로 인한 보강 계획", "", "", "", "", "", "", "", "", "", "", "", "", ""]);
+  
+  // Row 9-10: 표 헤더
+  ws_data.push(["결보강/\n수업교체", "일자", "요일", "교시", "학반", "과목", "교사명", "이동", "일자", "요일", "교시", "학반", "과목", "교사명"]);
+  ws_data.push(["", "", "", "", "", "", "", "", "", "", "", "", "", ""]);
+  
+  // Data Rows
+  let dataStartRow = 11;
   cart.forEach(item => {
-    let typeStr = item.type === 'swap' ? '교체' : '대강';
+    let typeStr = item.type === 'swap' ? '수업교체' : '결보강';
+    let arrow = item.type === 'swap' ? '↔' : '→';
+    
+    let myDay = item.myPeriod.replace(/[0-9\s]/g, '');
+    let myNum = item.myPeriod.replace(/[^0-9]/g, '');
     let mySubj = item.mySubject.replace(/<br>/g, " ");
-    let partnerTime = item.type === 'swap' ? item.partnerPeriod : '대강';
+    
+    let pDay = "", pNum = "", pSubj = "";
+    if (item.type === 'swap') {
+      pDay = item.partnerPeriod.replace(/[0-9\s]/g, '');
+      pNum = item.partnerPeriod.replace(/[^0-9]/g, '');
+      pSubj = item.partnerSubject.replace(/<br>/g, " ");
+    }
     
     ws_data.push([
-      typeStr,
-      item.myName,
-      mySubj,
-      item.myPeriod,
-      item.partnerName,
-      partnerTime,
-      "" // Reason (left blank for user to fill)
+      typeStr, "", myDay, myNum, "", mySubj, item.myName, arrow,
+      "", pDay, pNum, "", pSubj, item.partnerName
     ]);
   });
   
-  ws_data.push([""]);
-  ws_data.push(["위와 같이 결보강 계획서를 제출합니다."]);
-  ws_data.push([""]);
+  // Bottom text
+  ws_data.push(["", "", "", "", "", "", "", "", "", "", "", "", "", ""]);
+  ws_data.push(["위와 같이 결보강 계획서를 제출합니다.", "", "", "", "", "", "", "", "", "", "", "", "", ""]);
+  
   const today = new Date();
-  ws_data.push([`2026년  ${today.getMonth()+1}월  ${today.getDate()}일`]);
-  ws_data.push([""]);
-  ws_data.push(["제출자:                   (인)"]);
+  ws_data.push(["", "", "", "", "", "", "", "", "", "", "", "", "", ""]);
+  ws_data.push([`${today.getFullYear()}년   ${today.getMonth()+1}월   ${today.getDate()}일`, "", "", "", "", "", "", "", "", "", "", "", "", ""]);
+  ws_data.push(["", "", "", "", "", "", "", "", "", "", "", "", "", ""]);
+  ws_data.push(["교사                  (인)", "", "", "", "", "", "", "", "", "", "", "", "", ""]);
+  ws_data.push(["", "", "", "", "", "", "", "", "", "", "", "", "", ""]);
+  ws_data.push(["충무고등학교장 귀하", "", "", "", "", "", "", "", "", "", "", "", "", ""]);
   
   const ws = XLSX.utils.aoa_to_sheet(ws_data);
   
-  // Set column widths
-  ws["!cols"] = [
-    { wch: 8 },  // 구분
-    { wch: 12 }, // 원수업교사
-    { wch: 15 }, // 과목 및 학반
-    { wch: 18 }, // 결강일시
-    { wch: 12 }, // 보강교사
-    { wch: 18 }, // 보강일시
-    { wch: 15 }  // 사유
-  ];
-
-  // Merge Cells for Header
+  // Styles
+  const BORDER = {
+    top: {style: "thin"}, bottom: {style: "thin"}, left: {style: "thin"}, right: {style: "thin"}
+  };
+  const CENTER = { vertical: "center", horizontal: "center" };
+  const LEFT = { vertical: "center", horizontal: "left" };
+  const TITLE_STYLE = { font: { sz: 20, bold: true }, alignment: CENTER };
+  const HEADER_STYLE = { font: { bold: true }, alignment: { ...CENTER, wrapText: true }, border: BORDER };
+  const DATA_STYLE = { alignment: CENTER, border: BORDER };
+  const BOLD_CENTER = { font: { bold: true }, alignment: CENTER };
+  
+  // Apply styles to all cells
+  for (let r = 0; r < ws_data.length; r++) {
+    for (let c = 0; c < 14; c++) {
+      let cellRef = XLSX.utils.encode_cell({r, c});
+      if (!ws[cellRef]) ws[cellRef] = { v: "", t: "s" };
+      
+      if (r === 0 && c === 0) ws[cellRef].s = TITLE_STYLE; // Title
+      else if (r >= 2 && r <= 3 && c >= 11) ws[cellRef].s = DATA_STYLE; // Approval block
+      else if (r >= 5 && r <= 8) ws[cellRef].s = { font: { sz: 11 }, alignment: LEFT }; // Text
+      else if (r === 9 || r === 10) ws[cellRef].s = HEADER_STYLE; // Table Header
+      else if (r >= 11 && r < 11 + cart.length) ws[cellRef].s = DATA_STYLE; // Table Data
+      else if (r === 11 + cart.length + 1) ws[cellRef].s = { alignment: LEFT };
+      else if (r === 11 + cart.length + 3) ws[cellRef].s = BOLD_CENTER; // Date
+      else if (r === 11 + cart.length + 5) ws[cellRef].s = BOLD_CENTER; // Sign
+      else if (r === 11 + cart.length + 7) ws[cellRef].s = { font: { sz: 14, bold: true }, alignment: LEFT }; // Principal
+    }
+  }
+  
+  // Merges
   ws["!merges"] = [
-    { s: {r:0, c:0}, e: {r:0, c:6} }, // Title
-    { s: {r:ws_data.length-4, c:0}, e: {r:ws_data.length-4, c:6} },
-    { s: {r:ws_data.length-2, c:0}, e: {r:ws_data.length-2, c:6} },
-    { s: {r:ws_data.length-1, c:0}, e: {r:ws_data.length-1, c:6} }
+    { s: {r:0, c:0}, e: {r:1, c:13} }, // Title
+    // Approval block headers (L, M, N are NOT merged horizontally, they are single cells. But we might need to merge vertically if we want height. We'll leave them unmerged vertically)
+    { s: {r:5, c:0}, e: {r:5, c:13} },
+    { s: {r:6, c:0}, e: {r:6, c:13} },
+    { s: {r:7, c:0}, e: {r:7, c:13} },
+    { s: {r:8, c:0}, e: {r:8, c:13} },
+    
+    // Table Headers (Row 9-10)
+    { s: {r:9, c:0}, e: {r:10, c:0} },
+    { s: {r:9, c:1}, e: {r:10, c:1} },
+    { s: {r:9, c:2}, e: {r:10, c:2} },
+    { s: {r:9, c:3}, e: {r:10, c:3} },
+    { s: {r:9, c:4}, e: {r:10, c:4} },
+    { s: {r:9, c:5}, e: {r:10, c:5} },
+    { s: {r:9, c:6}, e: {r:10, c:6} },
+    { s: {r:9, c:7}, e: {r:10, c:7} },
+    { s: {r:9, c:8}, e: {r:10, c:8} },
+    { s: {r:9, c:9}, e: {r:10, c:9} },
+    { s: {r:9, c:10}, e: {r:10, c:10} },
+    { s: {r:9, c:11}, e: {r:10, c:11} },
+    { s: {r:9, c:12}, e: {r:10, c:12} },
+    { s: {r:9, c:13}, e: {r:10, c:13} }
   ];
   
-  // Page Setup for Printing (Fit to 1 Page)
-  ws["!pageSetup"] = { fitToWidth: 1, fitToHeight: 1, orientation: 'portrait' };
+  // Add merges for bottom text
+  let bottomIdx = 11 + cart.length + 1;
+  ws["!merges"].push({ s: {r:bottomIdx, c:0}, e: {r:bottomIdx, c:13} });
+  ws["!merges"].push({ s: {r:bottomIdx+2, c:0}, e: {r:bottomIdx+2, c:13} });
+  ws["!merges"].push({ s: {r:bottomIdx+4, c:0}, e: {r:bottomIdx+4, c:13} });
+  ws["!merges"].push({ s: {r:bottomIdx+6, c:0}, e: {r:bottomIdx+6, c:13} });
+
+  // Column Widths
+  ws["!cols"] = [
+    { wch: 9 }, // 결보강/수업교체
+    { wch: 6 }, // 일자
+    { wch: 4 }, // 요일
+    { wch: 4 }, // 교시
+    { wch: 5 }, // 학반
+    { wch: 12 },// 과목
+    { wch: 8 }, // 교사명
+    { wch: 5 }, // 이동 (↔)
+    { wch: 6 }, // 일자
+    { wch: 4 }, // 요일
+    { wch: 4 }, // 교시
+    { wch: 5 }, // 학반
+    { wch: 12 },// 과목
+    { wch: 8 }  // 교사명
+  ];
   
-  // Create workbook and add sheet
+  // Row Heights
+  ws["!rows"] = [];
+  ws["!rows"][3] = { hpt: 40 }; // 결재란 높이
+  ws["!rows"][9] = { hpt: 20 };
+  ws["!rows"][10] = { hpt: 20 };
+
   const wb = XLSX.utils.book_new();
   XLSX.utils.book_append_sheet(wb, ws, "결보강계획서");
-  
   XLSX.writeFile(wb, `결보강계획서_${new Date().getTime()}.xlsx`);
 });
 
