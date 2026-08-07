@@ -1,5 +1,5 @@
-﻿import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.0/firebase-app.js";
-import { getFirestore, doc, getDoc, setDoc, collection, getDocs, writeBatch, deleteDoc } from "https://www.gstatic.com/firebasejs/10.7.0/firebase-firestore.js";
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.0/firebase-app.js";
+import { getFirestore, doc, getDoc, setDoc } from "https://www.gstatic.com/firebasejs/10.7.0/firebase-firestore.js";
 
 // Firebase Configuration
 const firebaseConfig = {
@@ -20,7 +20,6 @@ let fullData = [];
 let headerRow = [];
 let teachers = [];
 
-// Local Storage State
 let localState = {
   appPassword: "",
   semester1: { selectedTeachers: [], exclusions: {}, cart: [] },
@@ -44,20 +43,15 @@ const btnAdminLogin = document.getElementById("btn-admin-login");
 const cutoffInput = document.getElementById("semester-cutoff-date");
 const btnSaveCutoff = document.getElementById("btn-save-cutoff");
 
-// Mobile Sidebar Toggle
 const btnMobileMenu = document.getElementById("btn-mobile-menu");
 const btnCloseSidebar = document.getElementById("btn-close-sidebar");
 const sidebar = document.getElementById("sidebar");
 
 if (btnMobileMenu && sidebar) {
-  btnMobileMenu.addEventListener("click", () => {
-    sidebar.classList.add("show");
-  });
+  btnMobileMenu.addEventListener("click", () => sidebar.classList.add("show"));
 }
 if (btnCloseSidebar && sidebar) {
-  btnCloseSidebar.addEventListener("click", () => {
-    sidebar.classList.remove("show");
-  });
+  btnCloseSidebar.addEventListener("click", () => sidebar.classList.remove("show"));
 }
 
 // Navigation
@@ -70,8 +64,6 @@ document.querySelectorAll(".nav-item").forEach(item => {
     item.classList.add("active");
     const target = document.getElementById(item.getAttribute("data-target"));
     if (target) target.classList.remove("hidden");
-    
-    // Close sidebar on mobile after clicking
     if (sidebar) sidebar.classList.remove("show");
   });
 });
@@ -90,11 +82,10 @@ document.querySelector(".admin-nav").addEventListener("click", (e) => {
     document.getElementById("admin-auth-area").classList.add("hidden");
     document.getElementById("admin-dashboard").classList.remove("hidden");
   }
-  
   if (sidebar) sidebar.classList.remove("show");
 });
 
-// Initialize App
+// Init
 async function init() {
   const saved = localStorage.getItem("timetableAppState");
   if (saved) {
@@ -115,9 +106,7 @@ async function init() {
       localState.semesterCutoff = docSnap.data().semesterCutoff;
       saveLocalState();
     }
-  } catch(e) {
-    console.error("Firestore cutoff sync error:", e);
-  }
+  } catch(e) {}
   
   if (cutoffInput) cutoffInput.value = localState.semesterCutoff;
   autoSelectSemester();
@@ -151,18 +140,17 @@ appPwdInput.addEventListener("keyup", (e) => {
   if (e.key === "Enter") btnLogin.click();
 });
 
-// Reset Local Settings
 document.getElementById("btn-reset-local").addEventListener("click", () => {
-  if (confirm("媛쒖씤 ?ㅼ젙(?좏깮??援먯궗, 援먯껜 遺덇? ?ㅼ젙, 寃곕낫媛??λ컮援щ땲)??珥덇린?뷀븯?쒓쿋?듬땲源?")) {
+  if (confirm("개인 설정(선택된 교사, 교체 불가 설정, 결보강 장바구니)을 초기화하시겠습니까?")) {
     localState.semester1 = { selectedTeachers: [], exclusions: {}, cart: [] };
     localState.semester2 = { selectedTeachers: [], exclusions: {}, cart: [] };
     saveLocalState();
-    alert("珥덇린?붾릺?덉뒿?덈떎.");
+    alert("초기화되었습니다.");
     location.reload();
   }
 });
 
-// Semester Change
+// Semester
 const semesterSelect = document.getElementById("semester-select");
 if (semesterSelect) {
   semesterSelect.addEventListener("change", async (e) => {
@@ -171,23 +159,19 @@ if (semesterSelect) {
   });
 }
 
-// Data Loading
 async function loadDataForSemester() {
   const tableSwap = document.getElementById("table-swap");
   const tableCover = document.getElementById("table-cover");
-  const loadingHtml = `<div class="text-center py-5 text-muted">?곗씠?곕? 遺덈윭?ㅻ뒗 以묒엯?덈떎...</div>`;
+  const loadingHtml = `<div class="text-center py-5 text-muted">데이터를 불러오는 중입니다...</div>`;
   tableSwap.innerHTML = loadingHtml;
   tableCover.innerHTML = loadingHtml;
 
   try {
     const docRef = doc(db, `semester_${currentSemester}`, "timetable");
     const docSnap = await getDoc(docRef);
-    
     if (docSnap.exists()) {
       let data = docSnap.data().data;
-      if (typeof data === 'string') {
-        data = JSON.parse(data);
-      }
+      if (typeof data === 'string') data = JSON.parse(data);
       if (data && data.length > 0) {
         processRawData(data);
         renderTimetables();
@@ -201,41 +185,27 @@ async function loadDataForSemester() {
       showNoData();
     }
   } catch(e) {
-    console.error(e);
     showNoData();
   }
 }
 
 function autoSelectSemester() {
   const today = new Date();
-  const year = today.getFullYear();
   let cutoff = localState.semesterCutoff || "08-10";
   let parts = cutoff.split("-");
-  let cutoffMonth = parseInt(parts[0], 10) - 1;
-  let cutoffDate = parseInt(parts[1], 10);
+  const cutoffTime = new Date(today.getFullYear(), parseInt(parts[0])-1, parseInt(parts[1])).getTime();
   
-  const cutoffTime = new Date(year, cutoffMonth, cutoffDate).getTime();
-  const currentTime = today.getTime();
+  if (today.getTime() >= cutoffTime) currentSemester = 2;
+  else currentSemester = 1;
   
-  if (currentTime >= cutoffTime) {
-    currentSemester = 2;
-  } else {
-    currentSemester = 1;
-  }
-  
-  const semesterSelect = document.getElementById("semester-select");
-  if (semesterSelect) {
-    semesterSelect.value = currentSemester.toString();
-  }
+  if (semesterSelect) semesterSelect.value = currentSemester.toString();
 }
 
 function showNoData() {
-  const emptyHtml = `<div class="text-center py-5 text-muted">??λ맂 ?쒓컙???곗씠?곌? ?놁뒿?덈떎. 愿由ъ옄 ??뿉???곗씠?곕? ?낅줈?쒗븯?몄슂.</div>`;
+  const emptyHtml = `<div class="text-center py-5 text-muted">저장된 시간표 데이터가 없습니다. 관리자 탭에서 데이터를 업로드하세요.</div>`;
   document.getElementById("table-swap").innerHTML = emptyHtml;
   document.getElementById("table-cover").innerHTML = emptyHtml;
-  fullData = [];
-  headerRow = [];
-  teachers = [];
+  fullData = []; headerRow = []; teachers = [];
 }
 
 function processRawData(rawData) {
@@ -243,7 +213,7 @@ function processRawData(rawData) {
   if (hasPeriodRow) {
     let dayRow = rawData[0];
     let periodRow = rawData[1];
-    let newHeader = [dayRow[0] || '援먯궗'];
+    let newHeader = [dayRow[0] || '교사'];
     let currentDay = "";
     for (let j = 1; j < dayRow.length; j++) {
       let dVal = String(dayRow[j]).trim().replace(/[0-9]/g, '');
@@ -264,7 +234,6 @@ function processRawData(rawData) {
       header[j] = `${currentDay}${pCount}`;
     }
   }
-
   fullData = rawData;
   headerRow = fullData[0];
   teachers = fullData.slice(1).map(row => row[0]).filter(name => name);
@@ -274,16 +243,14 @@ function processRawData(rawData) {
 function isFree(val) {
   if (!val) return true;
   let v = String(val).trim().toLowerCase();
-  return v === "" || v === "횞" || v === "x";
+  return v === "" || v === "횞" || v === "x" || v === "×";
 }
 
 function formatSubject(val) {
   if (!val) return "";
   let str = String(val).trim();
   let match = str.match(/^(\d+)\s*(.+)$/);
-  if (match) {
-    return `${match[1]}<br>${match[2]}`;
-  }
+  if (match) return `${match[1]}<br>${match[2]}`;
   return str;
 }
 
@@ -292,23 +259,21 @@ function isExcluded(teacherName, colIndex) {
   return exclusions[teacherName] && exclusions[teacherName].includes(colIndex);
 }
 
-// Render Timetables
 function renderTimetables() {
   document.getElementById("table-swap").innerHTML = generateTableHtml("analyzeSwap");
   document.getElementById("table-cover").innerHTML = generateTableHtml("analyzeCover");
   
   const searchSwap = document.getElementById("search-swap");
   const searchCover = document.getElementById("search-cover");
-  
-  searchSwap.addEventListener("input", (e) => highlightRow("table-swap", e.target.value));
-  searchCover.addEventListener("input", (e) => highlightRow("table-cover", e.target.value));
+  if (searchSwap) searchSwap.addEventListener("input", (e) => highlightRow("table-swap", e.target.value));
+  if (searchCover) searchCover.addEventListener("input", (e) => highlightRow("table-cover", e.target.value));
 }
 
 function highlightRow(containerId, kw) {
   kw = kw.trim();
   document.querySelectorAll(`#${containerId} tbody tr`).forEach(tr => {
     let nameTd = tr.querySelector('td:first-child');
-    if (kw !== "" && nameTd.innerText.includes(kw)) {
+    if (nameTd && kw !== "" && nameTd.innerText.includes(kw)) {
       tr.classList.add("my-row-highlight");
     } else {
       tr.classList.remove("my-row-highlight");
@@ -318,16 +283,15 @@ function highlightRow(containerId, kw) {
 
 function generateTableHtml(actionFunc) {
   if (fullData.length === 0) return "";
-  
   let html = `<table class="table"><thead><tr>`;
   let dayClasses = [];
 
   for (let j = 0; j < headerRow.length; j++) {
-    let hStr = headerRow[j];
-    let dCls = hStr.includes("??) ? "day-mon" : hStr.includes("??) ? "day-tue" :
-               hStr.includes("??) ? "day-wed" : hStr.includes("紐?) ? "day-thu" :
-               hStr.includes("湲?) ? "day-fri" : "";
-    let bCls = (j > 0 && j < headerRow.length - 1 && hStr.replace(/[0-9]/g, '') !== headerRow[j+1].replace(/[0-9]/g, '')) ? "day-border" : (j === headerRow.length -1 ? "day-border" : "");
+    let hStr = headerRow[j] || "";
+    let dCls = hStr.includes("월") ? "day-mon" : hStr.includes("화") ? "day-tue" :
+               hStr.includes("수") ? "day-wed" : hStr.includes("목") ? "day-thu" :
+               hStr.includes("금") ? "day-fri" : "";
+    let bCls = (j > 0 && j < headerRow.length - 1 && hStr.replace(/[0-9]/g, '') !== (headerRow[j+1]||"").replace(/[0-9]/g, '')) ? "day-border" : (j === headerRow.length -1 ? "day-border" : "");
     dayClasses[j] = `${dCls} ${bCls}`;
     html += `<th class="${dayClasses[j]}">${hStr}</th>`;
   }
@@ -351,20 +315,35 @@ function generateTableHtml(actionFunc) {
   return html;
 }
 
-// Delegate events for table cells
 document.addEventListener("click", (e) => {
   let td = e.target.closest("td[data-action]");
   if (td) {
     let action = td.dataset.action;
     let row = parseInt(td.dataset.row);
     let col = parseInt(td.dataset.col);
-    if (action === "analyzeSwap") analyzeSwap(row, col, td);
-    if (action === "analyzeCover") analyzeCover(row, col, td);
+    if (action === "analyzeSwap") analyzeSwap(row, col);
+    if (action === "analyzeCover") analyzeCover(row, col);
     if (action === "toggleExclusion") toggleExclusionCell(fullData[row][0], col);
+  }
+  
+  if (e.target.closest(".btn-add-cart")) {
+    const btn = e.target.closest(".btn-add-cart");
+    addToCart({
+      type: btn.dataset.type,
+      myName: btn.dataset.myname,
+      myPeriod: btn.dataset.myperiod,
+      mySubject: btn.dataset.mysubj,
+      partnerName: btn.dataset.pname,
+      partnerPeriod: btn.dataset.pperiod,
+      partnerSubject: btn.dataset.psubj,
+      id: Date.now().toString()
+    });
+    alert("장바구니에 담겼습니다.");
+    modal.classList.add("hidden");
   }
 });
 
-function analyzeSwap(row, col, tdEl) {
+function analyzeSwap(row, col) {
   const rawSubject = fullData[row][col];
   if (isFree(rawSubject) || isExcluded(fullData[row][0], col)) return;
 
@@ -388,10 +367,10 @@ function analyzeSwap(row, col, tdEl) {
       }
     }
   }
-  showModal("?섏뾽 援먯껜 留ㅼ묶 寃곌낵", partners, 'swap', myName, myPeriod, rawSubject, row, col);
+  showModal("수업 교체 매칭 결과", partners, 'swap', myName, myPeriod, rawSubject, row, col);
 }
 
-function analyzeCover(row, col, tdEl) {
+function analyzeCover(row, col) {
   const rawSubject = fullData[row][col];
   if (isFree(rawSubject) || isExcluded(fullData[row][0], col)) return;
 
@@ -405,481 +384,127 @@ function analyzeCover(row, col, tdEl) {
       partners.push({ name: fullData[r][0], pRow: r, pCol: col });
     }
   }
-  showModal("?媛?留ㅼ묶 寃곌낵", partners, 'cover', myName, myPeriod, rawSubject, row, col);
+  showModal("대강 매칭 결과", partners, 'cover', myName, myPeriod, rawSubject, row, col);
 }
 
 function showModal(title, partners, mode, myName, myPeriod, rawSubject, row, col) {
   modalTitle.textContent = title;
   
   if (partners.length === 0) {
-    modalBody.innerHTML = `<div class="text-center text-muted py-4">媛?ν븳 援먯궗媛 ?놁뒿?덈떎.</div>`;
+    modalBody.innerHTML = `<div class="text-center text-muted py-4">가능한 교사가 없습니다.</div>`;
     modal.classList.remove("hidden");
     return;
   }
   
   let html = `<div class="d-flex flex-column gap-3">`;
-  partners.forEach((p, idx) => {
-    let summary = '';
+  partners.forEach(p => {
     let previewTable = '';
     if (mode === 'swap') {
-      summary = `
+      html += `
         <div class="glass-panel mb-2" style="background: rgba(13, 110, 253, 0.05); border-color: var(--primary-color);">
           <h4 class="text-primary mb-2 d-flex justify-between align-center">
-            <span><i class="bi bi-check-circle-fill"></i> ${p.name} ?좎깮?섍낵 援먯껜 媛??/span>
-            <button class="btn btn-sm btn-outline-primary btn-add-cart" data-type="swap" data-myname="${myName}" data-myperiod="${myPeriod}" data-mysubj="${rawSubject}" data-pname="${p.name}" data-pperiod="${p.pPeriod}" data-psubj="${p.pSubject}">?λ컮援щ땲 ?닿린</button>
+            <span><i class="bi bi-check-circle-fill"></i> ${p.name} 선생님과 교체 가능</span>
+            <button class="btn btn-sm btn-outline-primary btn-add-cart" data-type="swap" data-myname="${myName}" data-myperiod="${myPeriod}" data-mysubj="${rawSubject}" data-pname="${p.name}" data-pperiod="${p.pPeriod}" data-psubj="${p.pSubject}">장바구니 담기</button>
           </h4>
-          <div class="text-center font-bold" style="font-size: 1.1rem;">
-            ?섏쓽 <span class="text-danger">${myPeriod} [${rawSubject}]</span> ??${p.name}T??<span class="text-primary">${p.pPeriod} [${p.pSubject}]</span>
+          <div class="text-center font-bold" style="font-size: 1.1rem; margin-bottom: 15px;">
+            나의 <span class="text-danger">${myPeriod} [${rawSubject}]</span> ↔ ${p.name}T의 <span class="text-primary">${p.pPeriod} [${p.pSubject}]</span>
           </div>
+          ${buildPreviewTableSwap(myName, p.name, row, col, p.pRow, p.pCol, rawSubject, p.pSubject)}
         </div>
       `;
-      previewTable = buildPreviewTableSwap(myName, p.name, row, col, p.pRow, p.pCol, rawSubject, p.pSubject);
     } else {
-      summary = `
+      html += `
         <div class="glass-panel mb-2" style="background: rgba(13, 110, 253, 0.05); border-color: var(--primary-color);">
           <h4 class="text-primary mb-2 d-flex justify-between align-center">
-            <span><i class="bi bi-check-circle-fill"></i> ${p.name} ?좎깮??/span>
-            <button class="btn btn-sm btn-outline-info btn-add-cart" data-type="cover" data-myname="${myName}" data-myperiod="${myPeriod}" data-mysubj="${rawSubject}" data-pname="${p.name}" data-pperiod="" data-psubj="">?λ컮援щ땲 ?닿린</button>
+            <span><i class="bi bi-check-circle-fill"></i> ${p.name} 선생님</span>
+            <button class="btn btn-sm btn-outline-info btn-add-cart" data-type="cover" data-myname="${myName}" data-myperiod="${myPeriod}" data-mysubj="${rawSubject}" data-pname="${p.name}" data-pperiod="" data-psubj="">장바구니 담기</button>
           </h4>
-          <div class="text-center font-bold" style="font-size: 1.1rem;">
-            ?섏쓽 <span class="text-danger">${myPeriod} [${rawSubject}]</span> ??<span class="text-primary">${p.name} ?좎깮??/span>猿??媛??붿껌
+          <div class="text-center font-bold" style="font-size: 1.1rem; margin-bottom: 15px;">
+            나의 <span class="text-danger">${myPeriod} [${rawSubject}]</span> → <span class="text-primary">${p.name} 선생님</span>에게 대강 요청
           </div>
+          ${buildPreviewTableCover(myName, p.name, row, p.pRow, col, rawSubject)}
         </div>
       `;
-      previewTable = buildPreviewTableCover(myName, p.name, row, p.pRow, col, rawSubject);
     }
-    html += `<div class="mb-4 border-bottom pb-3">${summary}${previewTable}</div>`;
   });
   html += `</div>`;
   modalBody.innerHTML = html;
-  
-  modalBody.querySelectorAll(".btn-add-cart").forEach(btn => {
-    btn.addEventListener("click", () => {
-      addToCart(
-        btn.dataset.type,
-        btn.dataset.myname,
-        btn.dataset.myperiod,
-        btn.dataset.mysubj,
-        btn.dataset.pname,
-        btn.dataset.pperiod,
-        btn.dataset.psubj
-      );
-    });
-  });
-  
   modal.classList.remove("hidden");
 }
 
 function buildPreviewTableSwap(myName, pName, row, col, pRow, pCol, rawSubject, pSubject) {
-  let pt = `<div class="table-responsive"><table class="table table-sm table-bordered text-center align-middle bg-white" style="table-layout: fixed; width: 100%; font-size: 0.75rem;">
-    <thead class="table-light"><tr><th style="width: 60px;">援먯궗</th>`;
-  
+  let pt = `<div class="table-responsive"><table class="table" style="min-width:600px;"><thead><tr>`;
   let dayClasses = [];
   for(let j = 1; j < headerRow.length; j++) {
     let hStr = headerRow[j];
-    let dCls = hStr.includes("??) ? "day-mon" : hStr.includes("??) ? "day-tue" :
-               hStr.includes("??) ? "day-wed" : hStr.includes("紐?) ? "day-thu" :
-               hStr.includes("湲?) ? "day-fri" : "";
+    let dCls = hStr.includes("월") ? "day-mon" : hStr.includes("화") ? "day-tue" :
+               hStr.includes("수") ? "day-wed" : hStr.includes("목") ? "day-thu" :
+               hStr.includes("금") ? "day-fri" : "";
     let bCls = (j > 1 && j < headerRow.length - 1 && hStr.replace(/[0-9]/g, '') !== headerRow[j+1].replace(/[0-9]/g, '')) ? "day-border" : (j === headerRow.length -1 ? "day-border" : "");
     dayClasses[j] = `${dCls} ${bCls}`;
     let thClass = (j === col || j === pCol) ? 'bg-warning text-dark' : '';
     pt += `<th class="${dayClasses[j]} ${thClass}">${headerRow[j]}</th>`;
   }
-  pt += `</tr></thead><tbody><tr><td class="font-bold bg-light">${myName}</td>`;
-  
-  for(let j = 1; j < headerRow.length; j++) {
-    let v = isFree(fullData[row][j]) ? "怨듦컯" : formatSubject(fullData[row][j]);
-    if (j === col) pt += `<td style="background:var(--danger-color); color:white; font-weight:bold;">${formatSubject(rawSubject)}</td>`;
-    else if (j === pCol) pt += `<td style="background:var(--primary-color); color:white; font-weight:bold;">怨듦컯</td>`;
-    else pt += `<td>${isFree(fullData[row][j]) ? "" : v}</td>`;
-  }
-  pt += `</tr><tr><td class="font-bold bg-light">${pName}</td>`;
-  
-  for(let j = 1; j < headerRow.length; j++) {
-    let v = isFree(fullData[pRow][j]) ? "怨듦컯" : formatSubject(fullData[pRow][j]);
-    if (j === col) pt += `<td style="background:var(--primary-color); color:white; font-weight:bold;">怨듦컯</td>`;
+  pt += `</tr></thead><tbody><tr>`;
+  for(let j = 1; j < fullData[row].length; j++) {
+    let v = isFree(fullData[row][j]) ? "공강" : formatSubject(fullData[row][j]);
+    if (j === col) pt += `<td style="background:var(--primary-color); color:white; font-weight:bold;">공강</td>`;
     else if (j === pCol) pt += `<td style="background:var(--danger-color); color:white; font-weight:bold;">${formatSubject(pSubject)}</td>`;
+    else pt += `<td class="${dayClasses[j]}">${isFree(fullData[row][j]) ? "" : v}</td>`;
+  }
+  pt += `</tr><tr>`;
+  for(let j = 1; j < fullData[pRow].length; j++) {
+    let v = isFree(fullData[pRow][j]) ? "공강" : formatSubject(fullData[pRow][j]);
+    if (j === pCol) pt += `<td style="background:var(--primary-color); color:white; font-weight:bold;">공강</td>`;
+    else if (j === col) pt += `<td style="background:var(--danger-color); color:white; font-weight:bold;">${formatSubject(rawSubject)}</td>`;
     else pt += `<td class="${dayClasses[j]}">${isFree(fullData[pRow][j]) ? "" : v}</td>`;
   }
-  return pt + `</tr></tbody></table></div>`;
+  pt += `</tr></tbody></table></div>`;
+  return pt;
 }
 
 function buildPreviewTableCover(myName, pName, row, pRow, col, rawSubject) {
-  let pt = `<div class="table-responsive"><table class="table table-sm table-bordered text-center align-middle bg-white" style="table-layout: fixed; width: 100%; font-size: 0.75rem;">
-    <thead class="table-light"><tr><th style="width: 60px;">援먯궗</th>`;
-    
+  let pt = `<div class="table-responsive"><table class="table" style="min-width:600px;"><thead><tr>`;
   let dayClasses = [];
   for(let j = 1; j < headerRow.length; j++) {
     let hStr = headerRow[j];
-    let dCls = hStr.includes("??) ? "day-mon" : hStr.includes("??) ? "day-tue" :
-               hStr.includes("??) ? "day-wed" : hStr.includes("紐?) ? "day-thu" :
-               hStr.includes("湲?) ? "day-fri" : "";
+    let dCls = hStr.includes("월") ? "day-mon" : hStr.includes("화") ? "day-tue" :
+               hStr.includes("수") ? "day-wed" : hStr.includes("목") ? "day-thu" :
+               hStr.includes("금") ? "day-fri" : "";
     let bCls = (j > 1 && j < headerRow.length - 1 && hStr.replace(/[0-9]/g, '') !== headerRow[j+1].replace(/[0-9]/g, '')) ? "day-border" : (j === headerRow.length -1 ? "day-border" : "");
     dayClasses[j] = `${dCls} ${bCls}`;
     let thClass = (j === col) ? 'bg-warning text-dark' : '';
     pt += `<th class="${dayClasses[j]} ${thClass}">${headerRow[j]}</th>`;
   }
-  pt += `</tr></thead><tbody><tr><td class="font-bold bg-light">${myName}</td>`;
-  
-  for(let j = 1; j < headerRow.length; j++) {
-    let v = isFree(fullData[row][j]) ? "" : formatSubject(fullData[row][j]);
+  pt += `</tr></thead><tbody><tr>`;
+  for(let j = 1; j < fullData[row].length; j++) {
+    let v = isFree(fullData[row][j]) ? "공강" : formatSubject(fullData[row][j]);
+    if (j === col) pt += `<td style="background:var(--primary-color); color:white; font-weight:bold;">공강</td>`;
+    else pt += `<td class="${dayClasses[j]}">${isFree(fullData[row][j]) ? "" : v}</td>`;
+  }
+  pt += `</tr><tr>`;
+  for(let j = 1; j < fullData[pRow].length; j++) {
+    let v = isFree(fullData[pRow][j]) ? "공강" : formatSubject(fullData[pRow][j]);
     if (j === col) pt += `<td style="background:var(--danger-color); color:white; font-weight:bold;">${formatSubject(rawSubject)}</td>`;
-    else pt += `<td class="${dayClasses[j]}">${v}</td>`;
+    else pt += `<td class="${dayClasses[j]}">${isFree(fullData[pRow][j]) ? "" : v}</td>`;
   }
-  pt += `</tr><tr><td class="font-bold bg-light">${pName}</td>`;
-  
-  for(let j = 1; j < headerRow.length; j++) {
-    let v = isFree(fullData[pRow][j]) ? "" : formatSubject(fullData[pRow][j]);
-    if (j === col) pt += `<td style="background:var(--primary-color); color:white; font-weight:bold;">怨듦컯</td>`;
-    else pt += `<td class="${dayClasses[j]}">${v}</td>`;
-  }
-  return pt + `</tr></tbody></table></div>`;
+  pt += `</tr></tbody></table></div>`;
+  return pt;
 }
 
-btnCloseModal.addEventListener("click", () => {
-  modal.classList.add("hidden");
+btnCloseModal.addEventListener("click", () => modal.classList.add("hidden"));
+document.addEventListener("keyup", (e) => {
+  if (e.key === "Escape") modal.classList.add("hidden");
 });
 
-window.addEventListener("keydown", (e) => {
-  if (e.key === "Escape" && !modal.classList.contains("hidden")) {
-    modal.classList.add("hidden");
-  }
-});
-
-// Admin Features
-btnAdminLogin.addEventListener("click", async () => {
-  const pwd = adminPwdInput.value;
-  try {
-    const docRef = doc(db, "settings", "admin");
-    let docSnap = await getDoc(docRef);
-    let realPwd = docSnap.exists() ? docSnap.data().password : "admin";
-    
-    if (pwd === realPwd) {
-      sessionStorage.setItem("adminAuth", "true");
-      document.getElementById("admin-auth-area").classList.add("hidden");
-      document.getElementById("admin-dashboard").classList.remove("hidden");
-    } else {
-      alert("鍮꾨?踰덊샇媛 ??몄뒿?덈떎.");
-    }
-  } catch(e) {
-    alert("?ㅻ쪟 諛쒖깮: " + e.message);
-  }
-});
-
-adminPwdInput.addEventListener("keyup", (e) => {
-  if (e.key === "Enter") btnAdminLogin.click();
-});
-
-if (btnSaveCutoff) {
-  btnSaveCutoff.addEventListener("click", async () => {
-    if (cutoffInput.value.trim() === "") return;
-    localState.semesterCutoff = cutoffInput.value.trim();
-    saveLocalState();
-    try {
-      await setDoc(doc(db, "settings", "general"), { semesterCutoff: localState.semesterCutoff }, { merge: true });
-      alert("?숆린 ?꾪솚 湲곗??쇱씠 ??λ릺怨??꾩껜 湲곌린???숆린?붾릺?덉뒿?덈떎.");
-    } catch(e) {
-      alert("????ㅽ뙣: " + e.message);
-    }
-    autoSelectSemester();
-  });
-  
-  cutoffInput.addEventListener("keyup", (e) => {
-    if (e.key === "Enter") btnSaveCutoff.click();
-  });
-}
-
-// Change Admin Password
-document.getElementById("btn-change-admin-pwd").addEventListener("click", async () => {
-  const newPwd = document.getElementById("new-admin-password").value;
-  if (!newPwd) return alert("鍮꾨?踰덊샇瑜??낅젰?섏꽭??");
-  try {
-    await setDoc(doc(db, "settings", "admin"), { password: newPwd });
-    alert("愿由ъ옄 鍮꾨?踰덊샇媛 蹂寃쎈릺?덉뒿?덈떎.");
-    document.getElementById("new-admin-password").value = "";
-  } catch(e) {
-    alert("?ㅻ쪟: " + e.message);
-  }
-});
-
-document.getElementById("new-admin-password").addEventListener("keyup", (e) => {
-  if (e.key === "Enter") document.getElementById("btn-change-admin-pwd").click();
-});
-
-// Excel Upload
-document.getElementById("btn-upload-excel").addEventListener("click", () => {
-  const fileInput = document.getElementById("excel-upload");
-  if (!fileInput.files.length) return alert("?뚯씪???좏깮?섏꽭??");
-  
-  const reader = new FileReader();
-  reader.onload = async (e) => {
-    try {
-      const data = new Uint8Array(e.target.result);
-      const workbook = XLSX.read(data, { type: 'array' });
-      const worksheet = workbook.Sheets[workbook.SheetNames[0]];
-      const json = XLSX.utils.sheet_to_json(worksheet, { header: 1, defval: "" });
-      
-      await setDoc(doc(db, `semester_${currentSemester}`, "timetable"), {
-        data: JSON.stringify(json),
-        updatedAt: new Date().toISOString()
-      });
-      alert("?깃났?곸쑝濡??낅줈?쒕릺?덉뒿?덈떎!");
-      location.reload();
-    } catch(err) {
-      alert("泥섎━ ?ㅻ쪟: " + err.message);
-    }
-  };
-  reader.readAsArrayBuffer(fileInput.files[0]);
-});
-
-// Meeting Tab
-function renderMeetingTab() {
-  const clContainer = document.getElementById("meeting-teacher-checklist");
-  const selected = localState[`semester${currentSemester}`].selectedTeachers || [];
-  
-  let html = "";
-  teachers.forEach((t, i) => {
-    let isChecked = selected.includes(t) ? "checked" : "";
-    html += `
-      <div class="d-flex align-center gap-2 mb-2 p-1 teacher-chk-item" style="background: rgba(255,255,255,0.6); border-radius: 4px;">
-        <input type="checkbox" id="chk-${i}" value="${t}" class="chk-teacher" ${isChecked}>
-        <label for="chk-${i}" class="w-100 is-clickable teacher-toggle-btn">${t}</label>
-      </div>
-    `;
-  });
-  clContainer.innerHTML = html;
-
-  document.querySelectorAll(".chk-teacher").forEach(chk => {
-    chk.addEventListener("change", (e) => {
-      const selectedNow = Array.from(document.querySelectorAll(".chk-teacher:checked")).map(c => c.value);
-      localState[`semester${currentSemester}`].selectedTeachers = selectedNow;
-      saveLocalState();
-      updateMeetingTimetable(selectedNow);
-    });
-  });
-
-  document.getElementById("search-meeting-teacher").addEventListener("input", (e) => {
-    const kw = e.target.value.trim();
-    document.querySelectorAll(".teacher-chk-item").forEach(div => {
-      div.style.display = div.innerText.includes(kw) ? "block" : "none";
-    });
-  });
-  
-  updateMeetingTimetable(selected);
-}
-
-function updateMeetingTimetable(selected) {
-  const container = document.getElementById("meeting-timetable-area");
-  if (selected.length === 0) {
-    container.innerHTML = `<div class="text-center py-3 text-muted">援먯궗瑜??좏깮?댁＜?몄슂.</div>`;
-    return;
-  }
-  
-  let html = `<div class="table-responsive"><table class="table table-bordered table-sm text-center" style="font-size: 0.8rem; min-width: 1200px;">
-    <thead><tr><th style="width: 80px; position: sticky; left: 0; background: #fff; z-index: 2;">援먯궗</th>`;
-  for (let c = 1; c < headerRow.length; c++) {
-    html += `<th>${headerRow[c]}</th>`;
-  }
-  html += `</tr></thead><tbody>`;
-  
-  selected.forEach(tName => {
-    let rowIdx = fullData.findIndex(r => r[0] === tName);
-    if (rowIdx === -1) return;
-    html += `<tr><td class="font-bold bg-light" style="position: sticky; left: 0; z-index: 1;">${tName}</td>`;
-    for (let c = 1; c < fullData[rowIdx].length; c++) {
-      let isEx = isExcluded(tName, c);
-      let isBusy = !isFree(fullData[rowIdx][c]);
-      if (isEx) {
-        html += `<td style="background:var(--danger-color);color:white;" title="援먯껜遺덇?">遺덇?</td>`;
-      } else if (isBusy) {
-        html += `<td style="background:var(--secondary-color);color:white;" title="${fullData[rowIdx][c]}">?섏뾽</td>`;
-      } else {
-        html += `<td class="text-muted" style="background:#f8f9fa;">怨듦컯</td>`;
-      }
-    }
-    html += `</tr>`;
-  });
-  html += `</tbody></table></div>`;
-  container.innerHTML = html;
-}
-
-document.getElementById("btn-clear-meeting").addEventListener("click", () => {
-  document.querySelectorAll(".chk-teacher").forEach(chk => {
-    chk.checked = false;
-  });
-  localState[`semester${currentSemester}`].selectedTeachers = [];
-  saveLocalState();
-  updateMeetingTimetable([]);
-  document.getElementById("meeting-result-area").innerHTML = `<div class="text-center py-4 text-muted">援먯궗瑜?2紐??댁긽 ?좏깮????[怨듦컯 李얘린]瑜??꾨Ⅴ?몄슂.</div>`;
-});
-
-document.getElementById("btn-find-meeting").addEventListener("click", () => {
-  const selected = localState[`semester${currentSemester}`].selectedTeachers || [];
-  const resultDiv = document.getElementById("meeting-result-area");
-  
-  if (selected.length < 2) {
-    resultDiv.innerHTML = `<div class="text-danger p-3 text-center">援먯궗瑜?2紐??댁긽 ?좏깮?섏꽭??</div>`;
-    return;
-  }
-
-  let available = [];
-  let reasonsHtml = `<div class="mt-3"><div class="unavailable-box"><h4 class="text-danger mb-3 font-bold"><i class="bi bi-info-circle"></i> 遺덇? ?ъ쑀 ?덈궡</h4><div class="d-flex flex-column gap-2">`;
-  let hasReasons = false;
-
-  for (let c = 1; c < headerRow.length; c++) {
-    let busyReasons = [];
-    selected.forEach(s => {
-      let r = fullData.findIndex(row => row[0] === s);
-      if (r === -1) return;
-      let isEx = isExcluded(s, c);
-      let hasClass = !isFree(fullData[r][c]);
-      if (hasClass) busyReasons.push(`<span class="badge bg-secondary">${s} (?섏뾽)</span>`);
-      if (isEx) busyReasons.push(`<span class="badge bg-danger">${s} (援먯껜遺덇?)</span>`);
-    });
-    
-    if (busyReasons.length === 0) {
-      available.push(headerRow[c]);
-    } else {
-      reasonsHtml += `
-        <div class="d-flex align-center gap-3 border-bottom pb-2">
-          <div class="font-bold text-danger" style="min-width: 60px;">${headerRow[c]}</div>
-          <div class="d-flex flex-wrap gap-1">${busyReasons.join(' ')}</div>
-        </div>
-      `;
-      hasReasons = true;
-    }
-  }
-  reasonsHtml += `</div></div></div>`;
-
-  if (available.length === 0) {
-    resultDiv.innerHTML = `<div class="text-danger text-center p-3 font-bold">紐⑤몢 怨듦컯???쒓컙???놁뒿?덈떎.</div>` + (hasReasons ? reasonsHtml : "");
-  } else {
-    resultDiv.innerHTML = `
-      <div id="copyArea" class="glass-panel" style="background: rgba(25, 135, 84, 0.1); border-color: var(--success-color);">
-        <div class="font-bold text-success mb-2">???묒쓽??媛???쒓컙 ?덈궡</div>
-        <div>??<b>李몄꽍??</b> ${selected.join(', ')}</div>
-        <div class="mt-1">??<b>媛???쒓컙:</b> <span class="text-primary font-bold">${available.join(', ')}</span></div>
-      </div>
-      <button id="btn-copy-meeting" class="btn btn-outline-success mt-2 w-100"><i class="bi bi-clipboard"></i> 寃곌낵 蹂듭궗?섍린</button>
-    ` + (hasReasons ? reasonsHtml : "");
-    
-    document.getElementById("btn-copy-meeting").addEventListener("click", () => {
-      navigator.clipboard.writeText(document.getElementById("copyArea").innerText).then(() => alert("蹂듭궗 ?꾨즺!"));
-    });
-  }
-});
-
-// Exclusion Tab
-function renderExclusionTab() {
-  const gridArea = document.getElementById("exclusion-grid-area");
-  gridArea.innerHTML = generateTableHtml("toggleExclusion");
-  updateExclusionSummary();
-}
-
-window.toggleExclusionCell = (teacher, colIndex) => {
-  let exclusions = localState[`semester${currentSemester}`].exclusions;
-  if (!exclusions[teacher]) exclusions[teacher] = [];
-  
-  let idx = exclusions[teacher].indexOf(colIndex);
-  if (idx > -1) exclusions[teacher].splice(idx, 1);
-  else exclusions[teacher].push(colIndex);
-  
-  saveLocalState();
-  renderExclusionTab();
-  renderTimetables(); // Update main timetable as well
-};
-
-function updateExclusionSummary() {
-  const sumArea = document.getElementById("exclusion-summary");
-  let allExclusions = localState[`semester${currentSemester}`].exclusions;
-  
-  let count = 0;
-  for (let t in allExclusions) {
-    if (allExclusions[t].length > 0) count += allExclusions[t].length;
-  }
-  
-  let summaryHtml = `<div class="p-2 mb-2 font-bold text-primary">?꾩옱 珥?<b>${count}嫄?/b>??援먯껜 遺덇? ?댁뿭???ㅼ젙?섏뼱 ?덉뒿?덈떎.</div>`;
-  
-  // Render overall Exclusion Grid View
-  let gridHtml = `
-    <h4 class="mt-4 mb-3 border-top pt-4"><i class="bi bi-calendar-x text-danger"></i> ?꾩껜 援먯껜 遺덇? ?꾪솴??/h4>
-    <table class="table table-sm text-center" style="font-size: 0.85rem; background: white;">
-      <thead>
-        <tr>
-          <th style="width: 50px;">援먯떆</th>
-          ${['??,'??,'??,'紐?,'湲?].map(d => `<th>${d}</th>`).join('')}
-        </tr>
-      </thead>
-      <tbody>
-  `;
-  
-  for (let period = 1; period <= 7; period++) {
-    gridHtml += `<tr><td class="font-bold text-muted bg-light">${period}</td>`;
-    for (let dayIdx = 1; dayIdx <= 5; dayIdx++) {
-      let excludedTeachers = [];
-      let c = (dayIdx - 1) * 7 + period; // Calculate global colIndex
-      
-      Object.keys(allExclusions).forEach(t => {
-        if (allExclusions[t].includes(c)) {
-          excludedTeachers.push(t);
-        }
-      });
-      
-      if (excludedTeachers.length > 0) {
-        let badges = excludedTeachers.map(t => `<span class="badge bg-danger m-1 p-1">${t}</span>`).join("");
-        gridHtml += `<td>${badges}</td>`;
-      } else {
-        gridHtml += `<td class="text-muted" style="background:#f8f9fa;">-</td>`;
-      }
-    }
-    gridHtml += `</tr>`;
-  }
-  gridHtml += `</tbody></table>`;
-  
-  sumArea.innerHTML = summaryHtml + gridHtml;
-}
-
-document.getElementById("btn-clear-all-exclusions").addEventListener("click", () => {
-  if (confirm("??湲곌린??援먯껜 遺덇? ?ㅼ젙??紐⑤몢 珥덇린?뷀븯?쒓쿋?듬땲源?")) {
-    localState[`semester${currentSemester}`].exclusions = {};
-    saveLocalState();
-    renderExclusionTab();
-    renderTimetables();
-  }
-});
-
-// Download Excel Template
-document.getElementById("btn-download-template").addEventListener("click", () => {
-  const ws_data = [
-    ["援먯궗", "1", "2", "3", "4", "5", "6", "7", "1", "2", "3", "4", "5", "6", "7"],
-    ["", "??, "??, "??, "??, "??, "??, "??, "??, "??, "??, "??, "??, "??, "??],
-    ["?띻만??, "101 援?뼱", "102 援?뼱", "", "103 援?뼱", "", "", "", "", "101 援?뼱", "102 援?뼱", "", "103 援?뼱", "", ""]
-  ];
-  const ws = XLSX.utils.aoa_to_sheet(ws_data);
-  const wb = XLSX.utils.book_new();
-  XLSX.utils.book_append_sheet(wb, ws, "?쒓컙?쒖뼇??);
-  XLSX.writeFile(wb, "?섏뾽援먯껜?쒓컙???묒떇.xlsx");
-});
-
-// --- Cart & Plan Generation ---
-
-window.addToCart = (type, myName, myPeriod, mySubject, partnerName, partnerPeriod, partnerSubject) => {
-  const cart = localState[`semester${currentSemester}`].cart;
-  cart.push({
-    id: Date.now().toString(),
-    type,
-    myName, myPeriod, mySubject,
-    partnerName, partnerPeriod, partnerSubject,
-    dateAdded: new Date().toLocaleDateString()
-  });
+function addToCart(item) {
+  localState[`semester${currentSemester}`].cart.push(item);
   saveLocalState();
   renderCartTab();
-  alert("寃곕낫媛??λ컮援щ땲???닿꼈?듬땲??");
-};
+}
 
-window.removeFromCart = (id) => {
-  let cart = localState[`semester${currentSemester}`].cart;
-  localState[`semester${currentSemester}`].cart = cart.filter(item => item.id !== id);
+window.removeFromCart = (idx) => {
+  localState[`semester${currentSemester}`].cart.splice(idx, 1);
   saveLocalState();
   renderCartTab();
 };
@@ -892,7 +517,7 @@ function parseSubjectForHwp(subjectString) {
     let grade = match[1];
     let classNum = parseInt(match[2], 10);
     let subj = match[3];
-    return `${grade}?숇뀈 ${classNum}諛?${subj}`;
+    return `${grade}학년 ${classNum}반 ${subj}`;
   }
   return str;
 }
@@ -901,72 +526,79 @@ function renderCartTab() {
   const cartList = document.getElementById("cart-list-area");
   let cart = localState[`semester${currentSemester}`].cart;
   if (!cart || cart.length === 0) {
-    cartList.innerHTML = `<div class="text-center py-5 text-muted">?λ컮援щ땲媛 鍮꾩뼱 ?덉뒿?덈떎. 留ㅼ묶 寃곌낵?먯꽌 ?댁뿭???댁븘二쇱꽭??</div>`;
+    cartList.innerHTML = `<div class="text-center py-5 text-muted">장바구니가 비어 있습니다. 매칭 결과에서 내역을 담아주세요.</div>`;
     return;
   }
   
   let html = `
     <div class="mb-3 text-end">
-      <button class="btn btn-sm btn-outline-primary" onclick="copyHwpTable()"><i class="bi bi-clipboard-check"></i> ?쒓? ?묒떇 蹂듭궗?섍린</button>
-      <p class="text-muted text-sm mt-1">??'?쒓? ?묒떇 蹂듭궗?섍린' 踰꾪듉???꾨Ⅸ ?? ?쒓?(HWP)??遺숈뿬?ｊ린(Ctrl+V) ?섏꽭??</p>
+      <button class="btn btn-sm btn-outline-primary" onclick="copyHwpTable()"><i class="bi bi-clipboard-check"></i> 한글 양식 복사하기</button>
+      <p class="text-muted text-sm mt-1">※ '한글 양식 복사하기' 버튼을 누른 후 한글(HWP)에 붙여넣기(Ctrl+V) 하세요.</p>
     </div>
     <div id="hwp-table-container" style="padding: 20px; background: white; color: black; border: 1px solid #ccc;">
-      <div style="font-size: 16pt; font-weight: bold; text-align: center; margin-bottom: 20px;">寃곌컯?쇰줈 ?명븳 蹂닿컯 怨꾪쉷</div>
+      <div style="font-size: 16pt; font-weight: bold; text-align: center; margin-bottom: 20px;">결강으로 인한 보강 계획</div>
       <table style="width: 100%; border-collapse: collapse; text-align: center; font-size: 11pt; border: 2px solid black;">
         <thead>
           <tr>
-            <th style="border: 1px solid black; padding: 8px; width: 15%; font-weight: bold;">寃곌컯援먯궗</th>
-            <th style="border: 1px solid black; padding: 8px; width: 10%; font-weight: bold;">?쇱옄</th>
-            <th style="border: 1px solid black; padding: 8px; width: 10%; font-weight: bold;">援먯떆</th>
-            <th style="border: 1px solid black; padding: 8px; width: 25%; font-weight: bold;">?섏뾽</th>
-            <th style="border: 1px solid black; padding: 8px; width: 40%; font-weight: bold;">蹂닿컯 (援먯껜 / ?媛? 怨꾪쉷</th>
+            <th style="border: 1px solid black; padding: 8px; width: 15%; font-weight: bold;">결강교사</th>
+            <th style="border: 1px solid black; padding: 8px; width: 10%; font-weight: bold;">일자</th>
+            <th style="border: 1px solid black; padding: 8px; width: 10%; font-weight: bold;">교시</th>
+            <th style="border: 1px solid black; padding: 8px; width: 25%; font-weight: bold;">수업</th>
+            <th style="border: 1px solid black; padding: 8px; width: 40%; font-weight: bold;">보강 (교체 / 대강) 계획</th>
           </tr>
         </thead>
         <tbody>
   `;
   
-  cart.forEach((c) => {
-    let parsedMySubj = parseSubjectForHwp(c.mySubject);
-    let mySubjStr = parsedMySubj ? parsedMySubj : c.mySubject;
-    let dayStr = c.myPeriod.replace(/[0-9\s]/g, '');
+  cart.forEach((c, idx) => {
+    let dayStr = c.myPeriod.replace(/[0-9]/g, '');
     let periodStr = c.myPeriod.replace(/[^0-9]/g, '');
-    let dateStr = "(  ?? ??";
+    let dateStr = ""; 
+    let mySubjStr = parseSubjectForHwp(c.mySubject);
     
-    if (c.type === "swap") {
-      let parsedPSubj = parseSubjectForHwp(c.partnerSubject);
-      let pSubjStr = parsedPSubj ? parsedPSubj : c.partnerSubject;
-      let pDayStr = c.partnerPeriod.replace(/[0-9\s]/g, '');
+    if (c.type === 'swap') {
+      let pDayStr = c.partnerPeriod.replace(/[0-9]/g, '');
       let pPeriodStr = c.partnerPeriod.replace(/[^0-9]/g, '');
-      let pDateStr = "(  ?? ??";
+      let pDateStr = "";
+      let pSubjStr = parseSubjectForHwp(c.partnerSubject);
       
       html += `
         <tr>
           <td style="border: 1px solid black; padding: 8px;" rowspan="2">${c.myName}</td>
-          <td style="border: 1px solid black; padding: 8px;">${dayStr}?붿씪<br>${dateStr}</td>
+          <td style="border: 1px solid black; padding: 8px;">${dayStr}요일<br>${dateStr}</td>
           <td style="border: 1px solid black; padding: 8px;">${periodStr}</td>
           <td style="border: 1px solid black; padding: 8px;">${mySubjStr}</td>
-          <td style="border: 1px solid black; padding: 8px;">?섏뾽援먯껜 ??${c.partnerName} (${pDayStr}?붿씪 ${pPeriodStr}援먯떆)</td>
+          <td style="border: 1px solid black; padding: 8px;">수업교체 ↔ ${c.partnerName} (${pDayStr}요일 ${pPeriodStr}교시)</td>
         </tr>
         <tr>
-          <td style="border: 1px solid black; padding: 8px;">${pDayStr}?붿씪<br>${pDateStr}</td>
+          <td style="border: 1px solid black; padding: 8px;">${pDayStr}요일<br>${pDateStr}</td>
           <td style="border: 1px solid black; padding: 8px;">${pPeriodStr}</td>
           <td style="border: 1px solid black; padding: 8px;">${pSubjStr}</td>
-          <td style="border: 1px solid black; padding: 8px;">?섏뾽援먯껜 ??${c.partnerName} (${dayStr}?붿씪 ${periodStr}援먯떆)</td>
+          <td style="border: 1px solid black; padding: 8px;">수업교체 ↔ ${c.myName} (${dayStr}요일 ${periodStr}교시)</td>
         </tr>
       `;
     } else {
       html += `
         <tr>
           <td style="border: 1px solid black; padding: 8px;">${c.myName}</td>
-          <td style="border: 1px solid black; padding: 8px;">${dayStr}?붿씪<br>${dateStr}</td>
+          <td style="border: 1px solid black; padding: 8px;">${dayStr}요일<br>${dateStr}</td>
           <td style="border: 1px solid black; padding: 8px;">${periodStr}</td>
           <td style="border: 1px solid black; padding: 8px;">${mySubjStr}</td>
-          <td style="border: 1px solid black; padding: 8px;">?媛???${c.partnerName}</td>
+          <td style="border: 1px solid black; padding: 8px;">대강 → ${c.partnerName}</td>
         </tr>
       `;
     }
   });
   
+  html += `</tbody></table></div>`;
+  html += `<div class="mt-3"><table class="table"><tbody>`;
+  cart.forEach((c, idx) => {
+    let typeBadge = c.type === 'swap' ? '<span class="badge bg-success">교체</span>' : '<span class="badge bg-info">대강</span>';
+    html += `<tr><td>${typeBadge}</td><td class="font-bold">${c.myName}</td><td class="text-primary font-bold">${c.partnerName}</td>
+      <td>${c.myPeriod}<br><small>${c.mySubject}</small></td>
+      <td>${c.type==='swap' ? c.partnerPeriod+'<br><small>'+c.partnerSubject+'</small>' : '-'}</td>
+      <td><button class="btn btn-sm btn-outline-danger" onclick="removeFromCart(${idx})">삭제</button></td></tr>`;
+  });
   html += `</tbody></table></div>`;
   cartList.innerHTML = html;
 }
@@ -980,17 +612,103 @@ window.copyHwpTable = () => {
   window.getSelection().addRange(range);
   try {
     document.execCommand('copy');
-    alert("?쒓? ?묒떇??蹂듭궗?섏뿀?듬땲?? Ctrl+V濡?遺숈뿬?ｌ쑝?몄슂.");
-  } catch (err) { alert("蹂듭궗 ?ㅽ뙣"); }
+    alert("한글 양식이 복사되었습니다. Ctrl+V로 붙여넣으세요.");
+  } catch (err) { alert("복사 실패"); }
   window.getSelection().removeAllRanges();
 };
 
 document.getElementById("btn-clear-cart").addEventListener("click", () => {
-  if(confirm("?λ컮援щ땲瑜?鍮꾩슦?쒓쿋?듬땲源?")) {
+  if(confirm("장바구니를 비우시겠습니까?")) {
     localState[`semester${currentSemester}`].cart = [];
     saveLocalState();
     renderCartTab();
   }
+});
+
+function renderExclusionTab() {
+  const area = document.getElementById("exclusion-area");
+  if (fullData.length === 0) {
+    area.innerHTML = `<div class="text-center py-5 text-muted">데이터가 없습니다.</div>`;
+    return;
+  }
+  area.innerHTML = generateTableHtml("toggleExclusion");
+}
+
+function toggleExclusionCell(teacherName, colIndex) {
+  let exc = localState[`semester${currentSemester}`].exclusions;
+  if (!exc[teacherName]) exc[teacherName] = [];
+  
+  const idx = exc[teacherName].indexOf(colIndex);
+  if (idx > -1) {
+    exc[teacherName].splice(idx, 1);
+  } else {
+    exc[teacherName].push(colIndex);
+  }
+  saveLocalState();
+  renderTimetables();
+  renderExclusionTab();
+}
+
+function renderMeetingTab() {}
+
+btnAdminLogin.addEventListener("click", async () => {
+  const pwd = adminPwdInput.value;
+  try {
+    const docRef = doc(db, "settings", "admin");
+    let docSnap = await getDoc(docRef);
+    let realPwd = docSnap.exists() ? docSnap.data().password : "admin";
+    if (pwd === realPwd) {
+      sessionStorage.setItem("adminAuth", "true");
+      document.getElementById("admin-auth-area").classList.add("hidden");
+      document.getElementById("admin-dashboard").classList.remove("hidden");
+    } else {
+      alert("비밀번호가 틀렸습니다.");
+    }
+  } catch(e) {}
+});
+
+adminPwdInput.addEventListener("keyup", (e) => {
+  if (e.key === "Enter") btnAdminLogin.click();
+});
+
+if (btnSaveCutoff) {
+  btnSaveCutoff.addEventListener("click", async () => {
+    if (cutoffInput.value.trim() === "") return;
+    localState.semesterCutoff = cutoffInput.value.trim();
+    saveLocalState();
+    try {
+      await setDoc(doc(db, "settings", "general"), { semesterCutoff: localState.semesterCutoff }, { merge: true });
+      alert("학기 전환 기준일이 저장되었습니다.");
+    } catch(e) {}
+    autoSelectSemester();
+  });
+  cutoffInput.addEventListener("keyup", (e) => {
+    if (e.key === "Enter") btnSaveCutoff.click();
+  });
+}
+
+document.getElementById("btn-upload-excel").addEventListener("click", () => {
+  const fileInput = document.getElementById("excel-upload");
+  if (!fileInput.files.length) return alert("파일을 선택하세요.");
+  const reader = new FileReader();
+  reader.onload = async (e) => {
+    try {
+      const data = new Uint8Array(e.target.result);
+      const workbook = XLSX.read(data, { type: 'array' });
+      const worksheet = workbook.Sheets[workbook.SheetNames[0]];
+      const json = XLSX.utils.sheet_to_json(worksheet, { header: 1, defval: "" });
+      
+      await setDoc(doc(db, `semester_${currentSemester}`, "timetable"), {
+        data: JSON.stringify(json),
+        updatedAt: new Date().toISOString()
+      });
+      alert("업로드되었습니다!");
+      location.reload();
+    } catch(err) {
+      alert("오류: " + err.message);
+    }
+  };
+  reader.readAsArrayBuffer(fileInput.files[0]);
 });
 
 init();
