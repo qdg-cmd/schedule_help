@@ -35,7 +35,7 @@ const appPwdInput = document.getElementById("app-password");
 const btnLogin = document.getElementById("btn-login");
 const authError = document.getElementById("auth-error");
 
-const modal = document.getElementById("matching-modal");
+const modal = document.getElementById("result-modal");
 const modalTitle = document.getElementById("modal-title");
 const modalBody = document.getElementById("modal-body");
 const btnCloseModal = document.getElementById("btn-close-modal");
@@ -96,8 +96,6 @@ async function init() {
     mainApp.classList.remove("hidden");
     await loadDataForSemester();
   }
-
-  setupEventListeners();
 }
 
 function saveLocalState() {
