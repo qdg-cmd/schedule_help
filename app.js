@@ -1,4 +1,4 @@
-﻿import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.0/firebase-app.js";
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.0/firebase-app.js";
 import { getFirestore, doc, getDoc, setDoc, collection, getDocs, writeBatch, deleteDoc } from "https://www.gstatic.com/firebasejs/10.7.0/firebase-firestore.js";
 
 // Firebase Configuration
@@ -39,7 +39,7 @@ const modal = document.getElementById("matching-modal");
 const modalTitle = document.getElementById("modal-title");
 const modalBody = document.getElementById("modal-body");
 const btnCloseModal = document.getElementById("btn-close-modal");
-const adminPwdInput = document.getElementById("admin-password");
+const adminPwdInput = document.getElementById("admin-password-input");
 const btnAdminLogin = document.getElementById("btn-admin-login");
 const cutoffInput = document.getElementById("semester-cutoff-date");
 const btnSaveCutoff = document.getElementById("btn-save-cutoff");
@@ -503,6 +503,12 @@ btnCloseModal.addEventListener("click", () => {
   modal.classList.remove("active");
 });
 
+document.addEventListener("keyup", (e) => {
+  if (e.key === "Escape" && modal.classList.contains("active")) {
+    modal.classList.remove("active");
+  }
+});
+
 // Admin Features
 btnAdminLogin.addEventListener("click", async () => {
   const pwd = adminPwdInput.value;
@@ -521,6 +527,10 @@ btnAdminLogin.addEventListener("click", async () => {
   } catch(e) {
     alert("오류 발생: " + e.message);
   }
+});
+
+adminPwdInput.addEventListener("keyup", (e) => {
+  if (e.key === "Enter") btnAdminLogin.click();
 });
 
 if (btnSaveCutoff) {
