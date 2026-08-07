@@ -1,4 +1,4 @@
-import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.0/firebase-app.js";
+﻿import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.0/firebase-app.js";
 import { getFirestore, doc, getDoc, setDoc, collection, getDocs, writeBatch, deleteDoc } from "https://www.gstatic.com/firebasejs/10.7.0/firebase-firestore.js";
 
 // Firebase Configuration
@@ -153,11 +153,11 @@ appPwdInput.addEventListener("keyup", (e) => {
 
 // Reset Local Settings
 document.getElementById("btn-reset-local").addEventListener("click", () => {
-  if (confirm("개인 설정(선택된 교사, 교체 불가 설정, 결보강 장바구니)을 초기화하시겠습니까?")) {
+  if (confirm("媛쒖씤 ?ㅼ젙(?좏깮??援먯궗, 援먯껜 遺덇? ?ㅼ젙, 寃곕낫媛??λ컮援щ땲)??珥덇린?뷀븯?쒓쿋?듬땲源?")) {
     localState.semester1 = { selectedTeachers: [], exclusions: {}, cart: [] };
     localState.semester2 = { selectedTeachers: [], exclusions: {}, cart: [] };
     saveLocalState();
-    alert("초기화되었습니다.");
+    alert("珥덇린?붾릺?덉뒿?덈떎.");
     location.reload();
   }
 });
@@ -175,7 +175,7 @@ if (semesterSelect) {
 async function loadDataForSemester() {
   const tableSwap = document.getElementById("table-swap");
   const tableCover = document.getElementById("table-cover");
-  const loadingHtml = `<div class="text-center py-5 text-muted">데이터를 불러오는 중입니다...</div>`;
+  const loadingHtml = `<div class="text-center py-5 text-muted">?곗씠?곕? 遺덈윭?ㅻ뒗 以묒엯?덈떎...</div>`;
   tableSwap.innerHTML = loadingHtml;
   tableCover.innerHTML = loadingHtml;
 
@@ -230,7 +230,7 @@ function autoSelectSemester() {
 }
 
 function showNoData() {
-  const emptyHtml = `<div class="text-center py-5 text-muted">저장된 시간표 데이터가 없습니다. 관리자 탭에서 데이터를 업로드하세요.</div>`;
+  const emptyHtml = `<div class="text-center py-5 text-muted">??λ맂 ?쒓컙???곗씠?곌? ?놁뒿?덈떎. 愿由ъ옄 ??뿉???곗씠?곕? ?낅줈?쒗븯?몄슂.</div>`;
   document.getElementById("table-swap").innerHTML = emptyHtml;
   document.getElementById("table-cover").innerHTML = emptyHtml;
   fullData = [];
@@ -243,7 +243,7 @@ function processRawData(rawData) {
   if (hasPeriodRow) {
     let dayRow = rawData[0];
     let periodRow = rawData[1];
-    let newHeader = [dayRow[0] || '교사'];
+    let newHeader = [dayRow[0] || '援먯궗'];
     let currentDay = "";
     for (let j = 1; j < dayRow.length; j++) {
       let dVal = String(dayRow[j]).trim().replace(/[0-9]/g, '');
@@ -274,7 +274,7 @@ function processRawData(rawData) {
 function isFree(val) {
   if (!val) return true;
   let v = String(val).trim().toLowerCase();
-  return v === "" || v === "×" || v === "x";
+  return v === "" || v === "횞" || v === "x";
 }
 
 function formatSubject(val) {
@@ -324,9 +324,9 @@ function generateTableHtml(actionFunc) {
 
   for (let j = 0; j < headerRow.length; j++) {
     let hStr = headerRow[j];
-    let dCls = hStr.includes("월") ? "day-mon" : hStr.includes("화") ? "day-tue" :
-               hStr.includes("수") ? "day-wed" : hStr.includes("목") ? "day-thu" :
-               hStr.includes("금") ? "day-fri" : "";
+    let dCls = hStr.includes("??) ? "day-mon" : hStr.includes("??) ? "day-tue" :
+               hStr.includes("??) ? "day-wed" : hStr.includes("紐?) ? "day-thu" :
+               hStr.includes("湲?) ? "day-fri" : "";
     let bCls = (j > 0 && j < headerRow.length - 1 && hStr.replace(/[0-9]/g, '') !== headerRow[j+1].replace(/[0-9]/g, '')) ? "day-border" : (j === headerRow.length -1 ? "day-border" : "");
     dayClasses[j] = `${dCls} ${bCls}`;
     html += `<th class="${dayClasses[j]}">${hStr}</th>`;
@@ -388,7 +388,7 @@ function analyzeSwap(row, col, tdEl) {
       }
     }
   }
-  showModal("수업 교체 매칭 결과", partners, 'swap', myName, myPeriod, rawSubject, row, col);
+  showModal("?섏뾽 援먯껜 留ㅼ묶 寃곌낵", partners, 'swap', myName, myPeriod, rawSubject, row, col);
 }
 
 function analyzeCover(row, col, tdEl) {
@@ -405,14 +405,14 @@ function analyzeCover(row, col, tdEl) {
       partners.push({ name: fullData[r][0], pRow: r, pCol: col });
     }
   }
-  showModal("대강 매칭 결과", partners, 'cover', myName, myPeriod, rawSubject, row, col);
+  showModal("?媛?留ㅼ묶 寃곌낵", partners, 'cover', myName, myPeriod, rawSubject, row, col);
 }
 
 function showModal(title, partners, mode, myName, myPeriod, rawSubject, row, col) {
   modalTitle.textContent = title;
   
   if (partners.length === 0) {
-    modalBody.innerHTML = `<div class="text-center text-muted py-4">가능한 교사가 없습니다.</div>`;
+    modalBody.innerHTML = `<div class="text-center text-muted py-4">媛?ν븳 援먯궗媛 ?놁뒿?덈떎.</div>`;
     modal.classList.remove("hidden");
     return;
   }
@@ -425,11 +425,11 @@ function showModal(title, partners, mode, myName, myPeriod, rawSubject, row, col
       summary = `
         <div class="glass-panel mb-2" style="background: rgba(13, 110, 253, 0.05); border-color: var(--primary-color);">
           <h4 class="text-primary mb-2 d-flex justify-between align-center">
-            <span><i class="bi bi-check-circle-fill"></i> ${p.name} 선생님과 교체 가능</span>
-            <button class="btn btn-sm btn-outline-primary btn-add-cart" data-type="swap" data-myname="${myName}" data-myperiod="${myPeriod}" data-mysubj="${rawSubject}" data-pname="${p.name}" data-pperiod="${p.pPeriod}" data-psubj="${p.pSubject}">장바구니 담기</button>
+            <span><i class="bi bi-check-circle-fill"></i> ${p.name} ?좎깮?섍낵 援먯껜 媛??/span>
+            <button class="btn btn-sm btn-outline-primary btn-add-cart" data-type="swap" data-myname="${myName}" data-myperiod="${myPeriod}" data-mysubj="${rawSubject}" data-pname="${p.name}" data-pperiod="${p.pPeriod}" data-psubj="${p.pSubject}">?λ컮援щ땲 ?닿린</button>
           </h4>
           <div class="text-center font-bold" style="font-size: 1.1rem;">
-            나의 <span class="text-danger">${myPeriod} [${rawSubject}]</span> ↔ ${p.name}T의 <span class="text-primary">${p.pPeriod} [${p.pSubject}]</span>
+            ?섏쓽 <span class="text-danger">${myPeriod} [${rawSubject}]</span> ??${p.name}T??<span class="text-primary">${p.pPeriod} [${p.pSubject}]</span>
           </div>
         </div>
       `;
@@ -438,11 +438,11 @@ function showModal(title, partners, mode, myName, myPeriod, rawSubject, row, col
       summary = `
         <div class="glass-panel mb-2" style="background: rgba(13, 110, 253, 0.05); border-color: var(--primary-color);">
           <h4 class="text-primary mb-2 d-flex justify-between align-center">
-            <span><i class="bi bi-check-circle-fill"></i> ${p.name} 선생님</span>
-            <button class="btn btn-sm btn-outline-info btn-add-cart" data-type="cover" data-myname="${myName}" data-myperiod="${myPeriod}" data-mysubj="${rawSubject}" data-pname="${p.name}" data-pperiod="" data-psubj="">장바구니 담기</button>
+            <span><i class="bi bi-check-circle-fill"></i> ${p.name} ?좎깮??/span>
+            <button class="btn btn-sm btn-outline-info btn-add-cart" data-type="cover" data-myname="${myName}" data-myperiod="${myPeriod}" data-mysubj="${rawSubject}" data-pname="${p.name}" data-pperiod="" data-psubj="">?λ컮援щ땲 ?닿린</button>
           </h4>
           <div class="text-center font-bold" style="font-size: 1.1rem;">
-            나의 <span class="text-danger">${myPeriod} [${rawSubject}]</span> ↔ <span class="text-primary">${p.name} 선생님</span>께 대강 요청
+            ?섏쓽 <span class="text-danger">${myPeriod} [${rawSubject}]</span> ??<span class="text-primary">${p.name} ?좎깮??/span>猿??媛??붿껌
           </div>
         </div>
       `;
@@ -472,14 +472,14 @@ function showModal(title, partners, mode, myName, myPeriod, rawSubject, row, col
 
 function buildPreviewTableSwap(myName, pName, row, col, pRow, pCol, rawSubject, pSubject) {
   let pt = `<div class="table-responsive"><table class="table table-sm table-bordered text-center align-middle bg-white" style="table-layout: fixed; width: 100%; font-size: 0.75rem;">
-    <thead class="table-light"><tr><th style="width: 60px;">교사</th>`;
+    <thead class="table-light"><tr><th style="width: 60px;">援먯궗</th>`;
   
   let dayClasses = [];
   for(let j = 1; j < headerRow.length; j++) {
     let hStr = headerRow[j];
-    let dCls = hStr.includes("월") ? "day-mon" : hStr.includes("화") ? "day-tue" :
-               hStr.includes("수") ? "day-wed" : hStr.includes("목") ? "day-thu" :
-               hStr.includes("금") ? "day-fri" : "";
+    let dCls = hStr.includes("??) ? "day-mon" : hStr.includes("??) ? "day-tue" :
+               hStr.includes("??) ? "day-wed" : hStr.includes("紐?) ? "day-thu" :
+               hStr.includes("湲?) ? "day-fri" : "";
     let bCls = (j > 1 && j < headerRow.length - 1 && hStr.replace(/[0-9]/g, '') !== headerRow[j+1].replace(/[0-9]/g, '')) ? "day-border" : (j === headerRow.length -1 ? "day-border" : "");
     dayClasses[j] = `${dCls} ${bCls}`;
     let thClass = (j === col || j === pCol) ? 'bg-warning text-dark' : '';
@@ -488,16 +488,16 @@ function buildPreviewTableSwap(myName, pName, row, col, pRow, pCol, rawSubject, 
   pt += `</tr></thead><tbody><tr><td class="font-bold bg-light">${myName}</td>`;
   
   for(let j = 1; j < headerRow.length; j++) {
-    let v = isFree(fullData[row][j]) ? "공강" : formatSubject(fullData[row][j]);
+    let v = isFree(fullData[row][j]) ? "怨듦컯" : formatSubject(fullData[row][j]);
     if (j === col) pt += `<td style="background:var(--danger-color); color:white; font-weight:bold;">${formatSubject(rawSubject)}</td>`;
-    else if (j === pCol) pt += `<td style="background:var(--primary-color); color:white; font-weight:bold;">공강</td>`;
+    else if (j === pCol) pt += `<td style="background:var(--primary-color); color:white; font-weight:bold;">怨듦컯</td>`;
     else pt += `<td>${isFree(fullData[row][j]) ? "" : v}</td>`;
   }
   pt += `</tr><tr><td class="font-bold bg-light">${pName}</td>`;
   
   for(let j = 1; j < headerRow.length; j++) {
-    let v = isFree(fullData[pRow][j]) ? "공강" : formatSubject(fullData[pRow][j]);
-    if (j === col) pt += `<td style="background:var(--primary-color); color:white; font-weight:bold;">공강</td>`;
+    let v = isFree(fullData[pRow][j]) ? "怨듦컯" : formatSubject(fullData[pRow][j]);
+    if (j === col) pt += `<td style="background:var(--primary-color); color:white; font-weight:bold;">怨듦컯</td>`;
     else if (j === pCol) pt += `<td style="background:var(--danger-color); color:white; font-weight:bold;">${formatSubject(pSubject)}</td>`;
     else pt += `<td class="${dayClasses[j]}">${isFree(fullData[pRow][j]) ? "" : v}</td>`;
   }
@@ -506,14 +506,14 @@ function buildPreviewTableSwap(myName, pName, row, col, pRow, pCol, rawSubject, 
 
 function buildPreviewTableCover(myName, pName, row, pRow, col, rawSubject) {
   let pt = `<div class="table-responsive"><table class="table table-sm table-bordered text-center align-middle bg-white" style="table-layout: fixed; width: 100%; font-size: 0.75rem;">
-    <thead class="table-light"><tr><th style="width: 60px;">교사</th>`;
+    <thead class="table-light"><tr><th style="width: 60px;">援먯궗</th>`;
     
   let dayClasses = [];
   for(let j = 1; j < headerRow.length; j++) {
     let hStr = headerRow[j];
-    let dCls = hStr.includes("월") ? "day-mon" : hStr.includes("화") ? "day-tue" :
-               hStr.includes("수") ? "day-wed" : hStr.includes("목") ? "day-thu" :
-               hStr.includes("금") ? "day-fri" : "";
+    let dCls = hStr.includes("??) ? "day-mon" : hStr.includes("??) ? "day-tue" :
+               hStr.includes("??) ? "day-wed" : hStr.includes("紐?) ? "day-thu" :
+               hStr.includes("湲?) ? "day-fri" : "";
     let bCls = (j > 1 && j < headerRow.length - 1 && hStr.replace(/[0-9]/g, '') !== headerRow[j+1].replace(/[0-9]/g, '')) ? "day-border" : (j === headerRow.length -1 ? "day-border" : "");
     dayClasses[j] = `${dCls} ${bCls}`;
     let thClass = (j === col) ? 'bg-warning text-dark' : '';
@@ -530,7 +530,7 @@ function buildPreviewTableCover(myName, pName, row, pRow, col, rawSubject) {
   
   for(let j = 1; j < headerRow.length; j++) {
     let v = isFree(fullData[pRow][j]) ? "" : formatSubject(fullData[pRow][j]);
-    if (j === col) pt += `<td style="background:var(--primary-color); color:white; font-weight:bold;">공강</td>`;
+    if (j === col) pt += `<td style="background:var(--primary-color); color:white; font-weight:bold;">怨듦컯</td>`;
     else pt += `<td class="${dayClasses[j]}">${v}</td>`;
   }
   return pt + `</tr></tbody></table></div>`;
@@ -559,10 +559,10 @@ btnAdminLogin.addEventListener("click", async () => {
       document.getElementById("admin-auth-area").classList.add("hidden");
       document.getElementById("admin-dashboard").classList.remove("hidden");
     } else {
-      alert("비밀번호가 틀렸습니다.");
+      alert("鍮꾨?踰덊샇媛 ??몄뒿?덈떎.");
     }
   } catch(e) {
-    alert("오류 발생: " + e.message);
+    alert("?ㅻ쪟 諛쒖깮: " + e.message);
   }
 });
 
@@ -577,9 +577,9 @@ if (btnSaveCutoff) {
     saveLocalState();
     try {
       await setDoc(doc(db, "settings", "general"), { semesterCutoff: localState.semesterCutoff }, { merge: true });
-      alert("학기 전환 기준일이 저장되고 전체 기기에 동기화되었습니다.");
+      alert("?숆린 ?꾪솚 湲곗??쇱씠 ??λ릺怨??꾩껜 湲곌린???숆린?붾릺?덉뒿?덈떎.");
     } catch(e) {
-      alert("저장 실패: " + e.message);
+      alert("????ㅽ뙣: " + e.message);
     }
     autoSelectSemester();
   });
@@ -592,13 +592,13 @@ if (btnSaveCutoff) {
 // Change Admin Password
 document.getElementById("btn-change-admin-pwd").addEventListener("click", async () => {
   const newPwd = document.getElementById("new-admin-password").value;
-  if (!newPwd) return alert("비밀번호를 입력하세요.");
+  if (!newPwd) return alert("鍮꾨?踰덊샇瑜??낅젰?섏꽭??");
   try {
     await setDoc(doc(db, "settings", "admin"), { password: newPwd });
-    alert("관리자 비밀번호가 변경되었습니다.");
+    alert("愿由ъ옄 鍮꾨?踰덊샇媛 蹂寃쎈릺?덉뒿?덈떎.");
     document.getElementById("new-admin-password").value = "";
   } catch(e) {
-    alert("오류: " + e.message);
+    alert("?ㅻ쪟: " + e.message);
   }
 });
 
@@ -609,7 +609,7 @@ document.getElementById("new-admin-password").addEventListener("keyup", (e) => {
 // Excel Upload
 document.getElementById("btn-upload-excel").addEventListener("click", () => {
   const fileInput = document.getElementById("excel-upload");
-  if (!fileInput.files.length) return alert("파일을 선택하세요.");
+  if (!fileInput.files.length) return alert("?뚯씪???좏깮?섏꽭??");
   
   const reader = new FileReader();
   reader.onload = async (e) => {
@@ -623,10 +623,10 @@ document.getElementById("btn-upload-excel").addEventListener("click", () => {
         data: JSON.stringify(json),
         updatedAt: new Date().toISOString()
       });
-      alert("성공적으로 업로드되었습니다!");
+      alert("?깃났?곸쑝濡??낅줈?쒕릺?덉뒿?덈떎!");
       location.reload();
     } catch(err) {
-      alert("처리 오류: " + err.message);
+      alert("泥섎━ ?ㅻ쪟: " + err.message);
     }
   };
   reader.readAsArrayBuffer(fileInput.files[0]);
@@ -671,12 +671,12 @@ function renderMeetingTab() {
 function updateMeetingTimetable(selected) {
   const container = document.getElementById("meeting-timetable-area");
   if (selected.length === 0) {
-    container.innerHTML = `<div class="text-center py-3 text-muted">교사를 선택해주세요.</div>`;
+    container.innerHTML = `<div class="text-center py-3 text-muted">援먯궗瑜??좏깮?댁＜?몄슂.</div>`;
     return;
   }
   
   let html = `<div class="table-responsive"><table class="table table-bordered table-sm text-center" style="font-size: 0.8rem; min-width: 1200px;">
-    <thead><tr><th style="width: 80px; position: sticky; left: 0; background: #fff; z-index: 2;">교사</th>`;
+    <thead><tr><th style="width: 80px; position: sticky; left: 0; background: #fff; z-index: 2;">援먯궗</th>`;
   for (let c = 1; c < headerRow.length; c++) {
     html += `<th>${headerRow[c]}</th>`;
   }
@@ -690,11 +690,11 @@ function updateMeetingTimetable(selected) {
       let isEx = isExcluded(tName, c);
       let isBusy = !isFree(fullData[rowIdx][c]);
       if (isEx) {
-        html += `<td style="background:var(--danger-color);color:white;" title="교체불가">불가</td>`;
+        html += `<td style="background:var(--danger-color);color:white;" title="援먯껜遺덇?">遺덇?</td>`;
       } else if (isBusy) {
-        html += `<td style="background:var(--secondary-color);color:white;" title="${fullData[rowIdx][c]}">수업</td>`;
+        html += `<td style="background:var(--secondary-color);color:white;" title="${fullData[rowIdx][c]}">?섏뾽</td>`;
       } else {
-        html += `<td class="text-muted" style="background:#f8f9fa;">공강</td>`;
+        html += `<td class="text-muted" style="background:#f8f9fa;">怨듦컯</td>`;
       }
     }
     html += `</tr>`;
@@ -710,7 +710,7 @@ document.getElementById("btn-clear-meeting").addEventListener("click", () => {
   localState[`semester${currentSemester}`].selectedTeachers = [];
   saveLocalState();
   updateMeetingTimetable([]);
-  document.getElementById("meeting-result-area").innerHTML = `<div class="text-center py-4 text-muted">교사를 2명 이상 선택한 후 [공강 찾기]를 누르세요.</div>`;
+  document.getElementById("meeting-result-area").innerHTML = `<div class="text-center py-4 text-muted">援먯궗瑜?2紐??댁긽 ?좏깮????[怨듦컯 李얘린]瑜??꾨Ⅴ?몄슂.</div>`;
 });
 
 document.getElementById("btn-find-meeting").addEventListener("click", () => {
@@ -718,12 +718,12 @@ document.getElementById("btn-find-meeting").addEventListener("click", () => {
   const resultDiv = document.getElementById("meeting-result-area");
   
   if (selected.length < 2) {
-    resultDiv.innerHTML = `<div class="text-danger p-3 text-center">교사를 2명 이상 선택하세요.</div>`;
+    resultDiv.innerHTML = `<div class="text-danger p-3 text-center">援먯궗瑜?2紐??댁긽 ?좏깮?섏꽭??</div>`;
     return;
   }
 
   let available = [];
-  let reasonsHtml = `<div class="mt-3"><div class="unavailable-box"><h4 class="text-danger mb-3 font-bold"><i class="bi bi-info-circle"></i> 불가 사유 안내</h4><div class="d-flex flex-column gap-2">`;
+  let reasonsHtml = `<div class="mt-3"><div class="unavailable-box"><h4 class="text-danger mb-3 font-bold"><i class="bi bi-info-circle"></i> 遺덇? ?ъ쑀 ?덈궡</h4><div class="d-flex flex-column gap-2">`;
   let hasReasons = false;
 
   for (let c = 1; c < headerRow.length; c++) {
@@ -733,8 +733,8 @@ document.getElementById("btn-find-meeting").addEventListener("click", () => {
       if (r === -1) return;
       let isEx = isExcluded(s, c);
       let hasClass = !isFree(fullData[r][c]);
-      if (hasClass) busyReasons.push(`<span class="badge bg-secondary">${s} (수업)</span>`);
-      if (isEx) busyReasons.push(`<span class="badge bg-danger">${s} (교체불가)</span>`);
+      if (hasClass) busyReasons.push(`<span class="badge bg-secondary">${s} (?섏뾽)</span>`);
+      if (isEx) busyReasons.push(`<span class="badge bg-danger">${s} (援먯껜遺덇?)</span>`);
     });
     
     if (busyReasons.length === 0) {
@@ -752,19 +752,19 @@ document.getElementById("btn-find-meeting").addEventListener("click", () => {
   reasonsHtml += `</div></div></div>`;
 
   if (available.length === 0) {
-    resultDiv.innerHTML = `<div class="text-danger text-center p-3 font-bold">모두 공강인 시간이 없습니다.</div>` + (hasReasons ? reasonsHtml : "");
+    resultDiv.innerHTML = `<div class="text-danger text-center p-3 font-bold">紐⑤몢 怨듦컯???쒓컙???놁뒿?덈떎.</div>` + (hasReasons ? reasonsHtml : "");
   } else {
     resultDiv.innerHTML = `
       <div id="copyArea" class="glass-panel" style="background: rgba(25, 135, 84, 0.1); border-color: var(--success-color);">
-        <div class="font-bold text-success mb-2">✅ 협의회 가능 시간 안내</div>
-        <div>▪ <b>참석자:</b> ${selected.join(', ')}</div>
-        <div class="mt-1">▪ <b>가능 시간:</b> <span class="text-primary font-bold">${available.join(', ')}</span></div>
+        <div class="font-bold text-success mb-2">???묒쓽??媛???쒓컙 ?덈궡</div>
+        <div>??<b>李몄꽍??</b> ${selected.join(', ')}</div>
+        <div class="mt-1">??<b>媛???쒓컙:</b> <span class="text-primary font-bold">${available.join(', ')}</span></div>
       </div>
-      <button id="btn-copy-meeting" class="btn btn-outline-success mt-2 w-100"><i class="bi bi-clipboard"></i> 결과 복사하기</button>
+      <button id="btn-copy-meeting" class="btn btn-outline-success mt-2 w-100"><i class="bi bi-clipboard"></i> 寃곌낵 蹂듭궗?섍린</button>
     ` + (hasReasons ? reasonsHtml : "");
     
     document.getElementById("btn-copy-meeting").addEventListener("click", () => {
-      navigator.clipboard.writeText(document.getElementById("copyArea").innerText).then(() => alert("복사 완료!"));
+      navigator.clipboard.writeText(document.getElementById("copyArea").innerText).then(() => alert("蹂듭궗 ?꾨즺!"));
     });
   }
 });
@@ -798,16 +798,16 @@ function updateExclusionSummary() {
     if (allExclusions[t].length > 0) count += allExclusions[t].length;
   }
   
-  let summaryHtml = `<div class="p-2 mb-2 font-bold text-primary">현재 총 <b>${count}건</b>의 교체 불가 내역이 설정되어 있습니다.</div>`;
+  let summaryHtml = `<div class="p-2 mb-2 font-bold text-primary">?꾩옱 珥?<b>${count}嫄?/b>??援먯껜 遺덇? ?댁뿭???ㅼ젙?섏뼱 ?덉뒿?덈떎.</div>`;
   
   // Render overall Exclusion Grid View
   let gridHtml = `
-    <h4 class="mt-4 mb-3 border-top pt-4"><i class="bi bi-calendar-x text-danger"></i> 전체 교체 불가 현황판</h4>
+    <h4 class="mt-4 mb-3 border-top pt-4"><i class="bi bi-calendar-x text-danger"></i> ?꾩껜 援먯껜 遺덇? ?꾪솴??/h4>
     <table class="table table-sm text-center" style="font-size: 0.85rem; background: white;">
       <thead>
         <tr>
-          <th style="width: 50px;">교시</th>
-          ${['월','화','수','목','금'].map(d => `<th>${d}</th>`).join('')}
+          <th style="width: 50px;">援먯떆</th>
+          ${['??,'??,'??,'紐?,'湲?].map(d => `<th>${d}</th>`).join('')}
         </tr>
       </thead>
       <tbody>
@@ -840,7 +840,7 @@ function updateExclusionSummary() {
 }
 
 document.getElementById("btn-clear-all-exclusions").addEventListener("click", () => {
-  if (confirm("이 기기의 교체 불가 설정을 모두 초기화하시겠습니까?")) {
+  if (confirm("??湲곌린??援먯껜 遺덇? ?ㅼ젙??紐⑤몢 珥덇린?뷀븯?쒓쿋?듬땲源?")) {
     localState[`semester${currentSemester}`].exclusions = {};
     saveLocalState();
     renderExclusionTab();
@@ -851,14 +851,14 @@ document.getElementById("btn-clear-all-exclusions").addEventListener("click", ()
 // Download Excel Template
 document.getElementById("btn-download-template").addEventListener("click", () => {
   const ws_data = [
-    ["교사", "1", "2", "3", "4", "5", "6", "7", "1", "2", "3", "4", "5", "6", "7"],
-    ["", "월", "월", "월", "월", "월", "월", "월", "화", "화", "화", "화", "화", "화", "화"],
-    ["홍길동", "101 국어", "102 국어", "", "103 국어", "", "", "", "", "101 국어", "102 국어", "", "103 국어", "", ""]
+    ["援먯궗", "1", "2", "3", "4", "5", "6", "7", "1", "2", "3", "4", "5", "6", "7"],
+    ["", "??, "??, "??, "??, "??, "??, "??, "??, "??, "??, "??, "??, "??, "??],
+    ["?띻만??, "101 援?뼱", "102 援?뼱", "", "103 援?뼱", "", "", "", "", "101 援?뼱", "102 援?뼱", "", "103 援?뼱", "", ""]
   ];
   const ws = XLSX.utils.aoa_to_sheet(ws_data);
   const wb = XLSX.utils.book_new();
-  XLSX.utils.book_append_sheet(wb, ws, "시간표양식");
-  XLSX.writeFile(wb, "수업교체시간표_양식.xlsx");
+  XLSX.utils.book_append_sheet(wb, ws, "?쒓컙?쒖뼇??);
+  XLSX.writeFile(wb, "?섏뾽援먯껜?쒓컙???묒떇.xlsx");
 });
 
 // --- Cart & Plan Generation ---
@@ -874,7 +874,7 @@ window.addToCart = (type, myName, myPeriod, mySubject, partnerName, partnerPerio
   });
   saveLocalState();
   renderCartTab();
-  alert("결보강 장바구니에 담겼습니다!");
+  alert("寃곕낫媛??λ컮援щ땲???닿꼈?듬땲??");
 };
 
 window.removeFromCart = (id) => {
@@ -892,7 +892,7 @@ function parseSubjectForHwp(subjectString) {
     let grade = match[1];
     let classNum = parseInt(match[2], 10);
     let subj = match[3];
-    return `${grade}학년 ${classNum}반 ${subj}`;
+    return `${grade}?숇뀈 ${classNum}諛?${subj}`;
   }
   return str;
 }
@@ -901,25 +901,25 @@ function renderCartTab() {
   const cartList = document.getElementById("cart-list-area");
   let cart = localState[`semester${currentSemester}`].cart;
   if (!cart || cart.length === 0) {
-    cartList.innerHTML = `<div class="text-center py-5 text-muted">장바구니가 비어 있습니다. 매칭 결과에서 내역을 담아주세요.</div>`;
+    cartList.innerHTML = `<div class="text-center py-5 text-muted">?λ컮援щ땲媛 鍮꾩뼱 ?덉뒿?덈떎. 留ㅼ묶 寃곌낵?먯꽌 ?댁뿭???댁븘二쇱꽭??</div>`;
     return;
   }
   
   let html = `
     <div class="mb-3 text-end">
-      <button class="btn btn-sm btn-outline-primary" onclick="copyHwpTable()"><i class="bi bi-clipboard-check"></i> 한글 양식 복사하기</button>
-      <p class="text-muted text-sm mt-1">※ '한글 양식 복사하기' 버튼을 누른 후, 한글(HWP)에 붙여넣기(Ctrl+V) 하세요.</p>
+      <button class="btn btn-sm btn-outline-primary" onclick="copyHwpTable()"><i class="bi bi-clipboard-check"></i> ?쒓? ?묒떇 蹂듭궗?섍린</button>
+      <p class="text-muted text-sm mt-1">??'?쒓? ?묒떇 蹂듭궗?섍린' 踰꾪듉???꾨Ⅸ ?? ?쒓?(HWP)??遺숈뿬?ｊ린(Ctrl+V) ?섏꽭??</p>
     </div>
     <div id="hwp-table-container" style="padding: 20px; background: white; color: black; border: 1px solid #ccc;">
-      <div style="font-size: 16pt; font-weight: bold; text-align: center; margin-bottom: 20px;">결강으로 인한 보강 계획</div>
+      <div style="font-size: 16pt; font-weight: bold; text-align: center; margin-bottom: 20px;">寃곌컯?쇰줈 ?명븳 蹂닿컯 怨꾪쉷</div>
       <table style="width: 100%; border-collapse: collapse; text-align: center; font-size: 11pt; border: 2px solid black;">
         <thead>
           <tr>
-            <th style="border: 1px solid black; padding: 8px; width: 15%; font-weight: bold;">결강교사</th>
-            <th style="border: 1px solid black; padding: 8px; width: 10%; font-weight: bold;">일자</th>
-            <th style="border: 1px solid black; padding: 8px; width: 10%; font-weight: bold;">교시</th>
-            <th style="border: 1px solid black; padding: 8px; width: 25%; font-weight: bold;">수업</th>
-            <th style="border: 1px solid black; padding: 8px; width: 40%; font-weight: bold;">보강 (교체 / 대강) 계획</th>
+            <th style="border: 1px solid black; padding: 8px; width: 15%; font-weight: bold;">寃곌컯援먯궗</th>
+            <th style="border: 1px solid black; padding: 8px; width: 10%; font-weight: bold;">?쇱옄</th>
+            <th style="border: 1px solid black; padding: 8px; width: 10%; font-weight: bold;">援먯떆</th>
+            <th style="border: 1px solid black; padding: 8px; width: 25%; font-weight: bold;">?섏뾽</th>
+            <th style="border: 1px solid black; padding: 8px; width: 40%; font-weight: bold;">蹂닿컯 (援먯껜 / ?媛? 怨꾪쉷</th>
           </tr>
         </thead>
         <tbody>
@@ -930,38 +930,38 @@ function renderCartTab() {
     let mySubjStr = parsedMySubj ? parsedMySubj : c.mySubject;
     let dayStr = c.myPeriod.replace(/[0-9\s]/g, '');
     let periodStr = c.myPeriod.replace(/[^0-9]/g, '');
-    let dateStr = "(  월  일)";
+    let dateStr = "(  ?? ??";
     
     if (c.type === "swap") {
       let parsedPSubj = parseSubjectForHwp(c.partnerSubject);
       let pSubjStr = parsedPSubj ? parsedPSubj : c.partnerSubject;
       let pDayStr = c.partnerPeriod.replace(/[0-9\s]/g, '');
       let pPeriodStr = c.partnerPeriod.replace(/[^0-9]/g, '');
-      let pDateStr = "(  월  일)";
+      let pDateStr = "(  ?? ??";
       
       html += `
         <tr>
           <td style="border: 1px solid black; padding: 8px;" rowspan="2">${c.myName}</td>
-          <td style="border: 1px solid black; padding: 8px;">${dayStr}요일<br>${dateStr}</td>
+          <td style="border: 1px solid black; padding: 8px;">${dayStr}?붿씪<br>${dateStr}</td>
           <td style="border: 1px solid black; padding: 8px;">${periodStr}</td>
           <td style="border: 1px solid black; padding: 8px;">${mySubjStr}</td>
-          <td style="border: 1px solid black; padding: 8px;">수업교체 ↔ ${c.partnerName} (${pDayStr}요일 ${pPeriodStr}교시)</td>
+          <td style="border: 1px solid black; padding: 8px;">?섏뾽援먯껜 ??${c.partnerName} (${pDayStr}?붿씪 ${pPeriodStr}援먯떆)</td>
         </tr>
         <tr>
-          <td style="border: 1px solid black; padding: 8px;">${pDayStr}요일<br>${pDateStr}</td>
+          <td style="border: 1px solid black; padding: 8px;">${pDayStr}?붿씪<br>${pDateStr}</td>
           <td style="border: 1px solid black; padding: 8px;">${pPeriodStr}</td>
           <td style="border: 1px solid black; padding: 8px;">${pSubjStr}</td>
-          <td style="border: 1px solid black; padding: 8px;">수업교체 ↔ ${c.partnerName} (${dayStr}요일 ${periodStr}교시)</td>
+          <td style="border: 1px solid black; padding: 8px;">?섏뾽援먯껜 ??${c.partnerName} (${dayStr}?붿씪 ${periodStr}援먯떆)</td>
         </tr>
       `;
     } else {
       html += `
         <tr>
           <td style="border: 1px solid black; padding: 8px;">${c.myName}</td>
-          <td style="border: 1px solid black; padding: 8px;">${dayStr}요일<br>${dateStr}</td>
+          <td style="border: 1px solid black; padding: 8px;">${dayStr}?붿씪<br>${dateStr}</td>
           <td style="border: 1px solid black; padding: 8px;">${periodStr}</td>
           <td style="border: 1px solid black; padding: 8px;">${mySubjStr}</td>
-          <td style="border: 1px solid black; padding: 8px;">대강 → ${c.partnerName}</td>
+          <td style="border: 1px solid black; padding: 8px;">?媛???${c.partnerName}</td>
         </tr>
       `;
     }
@@ -980,182 +980,17 @@ window.copyHwpTable = () => {
   window.getSelection().addRange(range);
   try {
     document.execCommand('copy');
-    alert("한글 양식이 복사되었습니다. Ctrl+V로 붙여넣으세요.");
-  } catch (err) { alert("복사 실패"); }
+    alert("?쒓? ?묒떇??蹂듭궗?섏뿀?듬땲?? Ctrl+V濡?遺숈뿬?ｌ쑝?몄슂.");
+  } catch (err) { alert("蹂듭궗 ?ㅽ뙣"); }
   window.getSelection().removeAllRanges();
 };
 
 document.getElementById("btn-clear-cart").addEventListener("click", () => {
-  if(confirm("장바구니를 비우시겠습니까?")) {
+  if(confirm("?λ컮援щ땲瑜?鍮꾩슦?쒓쿋?듬땲源?")) {
     localState[`semester${currentSemester}`].cart = [];
     saveLocalState();
     renderCartTab();
   }
-});
-
-      <td>${item.type === 'swap' ? item.partnerPeriod + '<br><small class="text-muted">' + item.partnerSubject + '</small>' : '-'}</td>
-      <td><button class="btn btn-sm btn-outline-danger" onclick="removeFromCart('${item.id}')">삭제</button></td>
-    </tr>`;
-  });
-  html += `</tbody></table>`;
-  container.innerHTML = html;
-}
-
-document.getElementById("btn-download-plan").addEventListener("click", () => {
-  const cart = localState[`semester${currentSemester}`].cart;
-  if (!cart || cart.length === 0) {
-    return alert("장바구니가 비어 있습니다.");
-  }
-  
-  const ws_data = [];
-  
-  // Row 0-1: Title
-  ws_data.push(["결 보 강  계 획 서", "", "", "", "", "", "", "", "", "", "", "", "", ""]);
-  ws_data.push(["", "", "", "", "", "", "", "", "", "", "", "", "", ""]);
-  
-  // Row 2-3: 결재란
-  ws_data.push(["", "", "", "", "", "", "", "", "", "", "", "일과", "교육과정부장", "교감"]);
-  ws_data.push(["", "", "", "", "", "", "", "", "", "", "", "", "", ""]);
-  
-  // Row 4: Blank
-  ws_data.push(["", "", "", "", "", "", "", "", "", "", "", "", "", ""]);
-  
-  // Row 5-8: 안내문
-  ws_data.push(["1. 결 강 일 : 20   년   월   일 부터  20   년   월   일 까지   (   ) 일", "", "", "", "", "", "", "", "", "", "", "", "", ""]);
-  ws_data.push(["2. 사   유 : 공무출장( ) 공가( ) 연가( ) 조퇴( ) 지참( ) 병가( )", "", "", "", "", "", "", "", "", "", "", "", "", ""]);
-  ws_data.push(["             기타(     , 사유 -         )", "", "", "", "", "", "", "", "", "", "", "", "", ""]);
-  ws_data.push(["3. 결강으로 인한 보강 계획", "", "", "", "", "", "", "", "", "", "", "", "", ""]);
-  
-  // Row 9-10: 표 헤더
-  ws_data.push(["결보강/\n수업교체", "일자", "요일", "교시", "학반", "과목", "교사명", "이동", "일자", "요일", "교시", "학반", "과목", "교사명"]);
-  ws_data.push(["", "", "", "", "", "", "", "", "", "", "", "", "", ""]);
-  
-  // Data Rows
-  let dataStartRow = 11;
-  cart.forEach(item => {
-    let typeStr = item.type === 'swap' ? '수업교체' : '결보강';
-    let arrow = item.type === 'swap' ? '↔' : '→';
-    
-    let myDay = item.myPeriod.replace(/[0-9\s]/g, '');
-    let myNum = item.myPeriod.replace(/[^0-9]/g, '');
-    let mySubj = item.mySubject.replace(/<br>/g, " ");
-    
-    let pDay = "", pNum = "", pSubj = "";
-    if (item.type === 'swap') {
-      pDay = item.partnerPeriod.replace(/[0-9\s]/g, '');
-      pNum = item.partnerPeriod.replace(/[^0-9]/g, '');
-      pSubj = item.partnerSubject.replace(/<br>/g, " ");
-    }
-    
-    ws_data.push([
-      typeStr, "", myDay, myNum, "", mySubj, item.myName, arrow,
-      "", pDay, pNum, "", pSubj, item.partnerName
-    ]);
-  });
-  
-  // Bottom text
-  ws_data.push(["", "", "", "", "", "", "", "", "", "", "", "", "", ""]);
-  ws_data.push(["위와 같이 결보강 계획서를 제출합니다.", "", "", "", "", "", "", "", "", "", "", "", "", ""]);
-  
-  const today = new Date();
-  ws_data.push(["", "", "", "", "", "", "", "", "", "", "", "", "", ""]);
-  ws_data.push([`${today.getFullYear()}년   ${today.getMonth()+1}월   ${today.getDate()}일`, "", "", "", "", "", "", "", "", "", "", "", "", ""]);
-  ws_data.push(["", "", "", "", "", "", "", "", "", "", "", "", "", ""]);
-  ws_data.push(["교사                  (인)", "", "", "", "", "", "", "", "", "", "", "", "", ""]);
-  ws_data.push(["", "", "", "", "", "", "", "", "", "", "", "", "", ""]);
-  ws_data.push(["충무고등학교장 귀하", "", "", "", "", "", "", "", "", "", "", "", "", ""]);
-  
-  const ws = XLSX.utils.aoa_to_sheet(ws_data);
-  
-  // Styles
-  const BORDER = {
-    top: {style: "thin"}, bottom: {style: "thin"}, left: {style: "thin"}, right: {style: "thin"}
-  };
-  const CENTER = { vertical: "center", horizontal: "center" };
-  const LEFT = { vertical: "center", horizontal: "left" };
-  const TITLE_STYLE = { font: { sz: 20, bold: true }, alignment: CENTER };
-  const HEADER_STYLE = { font: { bold: true }, alignment: { ...CENTER, wrapText: true }, border: BORDER };
-  const DATA_STYLE = { alignment: CENTER, border: BORDER };
-  const BOLD_CENTER = { font: { bold: true }, alignment: CENTER };
-  
-  // Apply styles to all cells
-  for (let r = 0; r < ws_data.length; r++) {
-    for (let c = 0; c < 14; c++) {
-      let cellRef = XLSX.utils.encode_cell({r, c});
-      if (!ws[cellRef]) ws[cellRef] = { v: "", t: "s" };
-      
-      if (r === 0 && c === 0) ws[cellRef].s = TITLE_STYLE; // Title
-      else if (r >= 2 && r <= 3 && c >= 11) ws[cellRef].s = DATA_STYLE; // Approval block
-      else if (r >= 5 && r <= 8) ws[cellRef].s = { font: { sz: 11 }, alignment: LEFT }; // Text
-      else if (r === 9 || r === 10) ws[cellRef].s = HEADER_STYLE; // Table Header
-      else if (r >= 11 && r < 11 + cart.length) ws[cellRef].s = DATA_STYLE; // Table Data
-      else if (r === 11 + cart.length + 1) ws[cellRef].s = { alignment: LEFT };
-      else if (r === 11 + cart.length + 3) ws[cellRef].s = BOLD_CENTER; // Date
-      else if (r === 11 + cart.length + 5) ws[cellRef].s = BOLD_CENTER; // Sign
-      else if (r === 11 + cart.length + 7) ws[cellRef].s = { font: { sz: 14, bold: true }, alignment: LEFT }; // Principal
-    }
-  }
-  
-  // Merges
-  ws["!merges"] = [
-    { s: {r:0, c:0}, e: {r:1, c:13} }, // Title
-    // Approval block headers (L, M, N are NOT merged horizontally, they are single cells. But we might need to merge vertically if we want height. We'll leave them unmerged vertically)
-    { s: {r:5, c:0}, e: {r:5, c:13} },
-    { s: {r:6, c:0}, e: {r:6, c:13} },
-    { s: {r:7, c:0}, e: {r:7, c:13} },
-    { s: {r:8, c:0}, e: {r:8, c:13} },
-    
-    // Table Headers (Row 9-10)
-    { s: {r:9, c:0}, e: {r:10, c:0} },
-    { s: {r:9, c:1}, e: {r:10, c:1} },
-    { s: {r:9, c:2}, e: {r:10, c:2} },
-    { s: {r:9, c:3}, e: {r:10, c:3} },
-    { s: {r:9, c:4}, e: {r:10, c:4} },
-    { s: {r:9, c:5}, e: {r:10, c:5} },
-    { s: {r:9, c:6}, e: {r:10, c:6} },
-    { s: {r:9, c:7}, e: {r:10, c:7} },
-    { s: {r:9, c:8}, e: {r:10, c:8} },
-    { s: {r:9, c:9}, e: {r:10, c:9} },
-    { s: {r:9, c:10}, e: {r:10, c:10} },
-    { s: {r:9, c:11}, e: {r:10, c:11} },
-    { s: {r:9, c:12}, e: {r:10, c:12} },
-    { s: {r:9, c:13}, e: {r:10, c:13} }
-  ];
-  
-  // Add merges for bottom text
-  let bottomIdx = 11 + cart.length + 1;
-  ws["!merges"].push({ s: {r:bottomIdx, c:0}, e: {r:bottomIdx, c:13} });
-  ws["!merges"].push({ s: {r:bottomIdx+2, c:0}, e: {r:bottomIdx+2, c:13} });
-  ws["!merges"].push({ s: {r:bottomIdx+4, c:0}, e: {r:bottomIdx+4, c:13} });
-  ws["!merges"].push({ s: {r:bottomIdx+6, c:0}, e: {r:bottomIdx+6, c:13} });
-
-  // Column Widths
-  ws["!cols"] = [
-    { wch: 9 }, // 결보강/수업교체
-    { wch: 6 }, // 일자
-    { wch: 4 }, // 요일
-    { wch: 4 }, // 교시
-    { wch: 5 }, // 학반
-    { wch: 12 },// 과목
-    { wch: 8 }, // 교사명
-    { wch: 5 }, // 이동 (↔)
-    { wch: 6 }, // 일자
-    { wch: 4 }, // 요일
-    { wch: 4 }, // 교시
-    { wch: 5 }, // 학반
-    { wch: 12 },// 과목
-    { wch: 8 }  // 교사명
-  ];
-  
-  // Row Heights
-  ws["!rows"] = [];
-  ws["!rows"][3] = { hpt: 40 }; // 결재란 높이
-  ws["!rows"][9] = { hpt: 20 };
-  ws["!rows"][10] = { hpt: 20 };
-
-  const wb = XLSX.utils.book_new();
-  XLSX.utils.book_append_sheet(wb, ws, "결보강계획서");
-  XLSX.writeFile(wb, `결보강계획서_${new Date().getTime()}.xlsx`);
 });
 
 init();
