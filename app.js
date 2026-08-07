@@ -626,7 +626,8 @@ document.getElementById("btn-clear-cart").addEventListener("click", () => {
 });
 
 function renderExclusionTab() {
-  const area = document.getElementById("exclusion-area");
+  const area = document.getElementById("exclusion-grid-area");
+  if (!area) return;
   if (fullData.length === 0) {
     area.innerHTML = `<div class="text-center py-5 text-muted">데이터가 없습니다.</div>`;
     return;
