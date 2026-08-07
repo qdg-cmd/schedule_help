@@ -91,11 +91,12 @@ async function init() {
   if (cutoffInput) cutoffInput.value = localState.semesterCutoff;
   autoSelectSemester();
   
-  if (localState.appPassword === "2026") {
-    authOverlay.classList.add("hidden");
-    mainApp.classList.remove("hidden");
-    await loadDataForSemester();
-  }
+  // 비밀번호 자동 로그인 기능 제거 (매번 입력하도록 강제)
+  // if (localState.appPassword === "2026") {
+  //   authOverlay.classList.add("hidden");
+  //   mainApp.classList.remove("hidden");
+  //   await loadDataForSemester();
+  // }
 }
 
 function saveLocalState() {
@@ -592,12 +593,56 @@ document.getElementById("btn-upload-excel").addEventListener("click", () => {
 function renderMeetingTab() {
   const clContainer = document.getElementById("meeting-teacher-checklist");
   const selected = localState[`semester${currentSemester}`].selectedTeachers || [];
-  let html = "";
+  let html = `<div class="d-flex flex-wrap gap-2">`;
   teachers.forEach((t, i) => {
-    let isChecked = selected.includes(t) ? "checked" : "";
-    html += `<div class="p-1"><input type="checkbox" class="chk-teacher" value="${t}" ${isChecked}> ${t}</div>`;
+    let isActive = selected.includes(t) ? "active btn-primary text-white" : "btn-outline-primary";
+    html += `<button class="btn btn-sm ${isActive} toggle-teacher-btn" data-val="${t}">${t}</button>`;
   });
+  html += `</div>`;
   clContainer.innerHTML = html;
+}
+
+document.addEventListener("click", (e) => {
+  if (e.target.classList.contains("toggle-teacher-btn")) {
+    let t = e.target.dataset.val;
+    let arr = localState[`semester${currentSemester}`].selectedTeachers || [];
+    if (arr.includes(t)) {
+      arr = arr.filter(v => v !== t);
+    } else {
+      arr.push(t);
+    }
+    localState[`semester${currentSemester}`].selectedTeachers = arr;
+    saveLocalState();
+    renderMeetingTab();
+    updateMeetingPreview();
+  }
+});
+
+function updateMeetingPreview() {
+  const selected = localState[`semester${currentSemester}`].selectedTeachers || [];
+  if (selected.length === 0) {
+    meetingTimetableArea.innerHTML = `<div class="text-center py-3 text-muted">교사를 선택해주세요.</div>`;
+    return;
+  }
+  
+  let ths = "";
+  selected.forEach(t => ths += `<th>${t}</th>`);
+  let previewHtml = `<table class="table table-sm text-center" style="font-size: 0.8rem;">
+    <thead class="bg-light"><tr><th>교시</th>${ths}</tr></thead><tbody>`;
+    
+  for (let i = 1; i < headerRow.length; i++) {
+    previewHtml += `<tr><td class="font-bold">${headerRow[i]}</td>`;
+    for (let t of selected) {
+      let row = fullData.find(r => r[0] === t);
+      let subj = row ? row[i] : "";
+      let disp = isFree(subj) ? "-" : formatSubject(subj);
+      let ex = isExcluded(t, i) ? "❌" : "";
+      previewHtml += `<td>${disp} <span class="text-danger">${ex}</span></td>`;
+    }
+    previewHtml += `</tr>`;
+  }
+  previewHtml += `</tbody></table>`;
+  meetingTimetableArea.innerHTML = previewHtml;
 }
 
 document.addEventListener("change", (e) => {
@@ -651,27 +696,7 @@ if (btnFindMeeting) {
         <i class="bi bi-exclamation-triangle-fill"></i> 모두 공강인 시간이 없습니다.
       </div>`;
     }
-    
-    let ths = "";
-    selected.forEach(t => ths += `<th>${t}</th>`);
-    let previewHtml = `<table class="table table-sm text-center" style="font-size: 0.8rem;">
-      <thead class="bg-light"><tr><th>교시</th>${ths}</tr></thead><tbody>`;
-      
-    for (let i = 1; i < headerRow.length; i++) {
-      let isCommon = commonFree.includes(headerRow[i]);
-      let trCls = isCommon ? 'bg-success bg-opacity-10' : '';
-      previewHtml += `<tr class="${trCls}"><td class="font-bold">${headerRow[i]}</td>`;
-      for (let t of selected) {
-        let row = fullData.find(r => r[0] === t);
-        let subj = row ? row[i] : "";
-        let disp = isFree(subj) ? "-" : formatSubject(subj);
-        let ex = isExcluded(t, i) ? "❌" : "";
-        previewHtml += `<td>${disp} <span class="text-danger">${ex}</span></td>`;
-      }
-      previewHtml += `</tr>`;
-    }
-    previewHtml += `</tbody></table>`;
-    meetingTimetableArea.innerHTML = previewHtml;
+    updateMeetingPreview();
   });
 }
 
@@ -749,25 +774,41 @@ window.toggleExclusionCell = function(tName, colIndex) {
 window.updateExclusionSummary = function() {
   const sumArea = document.getElementById("exclusion-summary");
   let exclusions = localState[`semester${currentSemester}`].exclusions;
-  let count = 0;
   
-  let html = `<h4 class="mb-2 font-bold"><i class="bi bi-list-check"></i> 설정된 내역 (자동 저장됨)</h4>
+  let html = `<h4 class="mb-2 font-bold"><i class="bi bi-list-check"></i> 설정된 내역 요약 (자동 저장됨)</h4>
               <table class="table table-sm table-bordered mt-2 text-center" style="font-size: 0.9rem; background-color: #fff;">
-                <thead class="bg-light"><tr><th style="width:120px;">교사명</th><th>교체 불가 교시</th></tr></thead>
+                <thead class="bg-light">
+                  <tr>
+                    <th>교시</th>
+                    <th class="day-mon">월</th>
+                    <th class="day-tue">화</th>
+                    <th class="day-wed">수</th>
+                    <th class="day-thu">목</th>
+                    <th class="day-fri">금</th>
+                  </tr>
+                </thead>
                 <tbody>`;
-  
-  for (let t in exclusions) {
-    if (exclusions[t] && exclusions[t].length > 0) {
-      html += `<tr>
-                <td class="font-bold text-danger align-middle">${t}</td>
-                <td class="text-start align-middle">${exclusions[t].sort((a,b) => a - b).map(c => headerRow[c]).join(', ')}</td>
-               </tr>`;
-      count++;
+                
+  let hasAnyExclusion = false;
+  for (let p = 1; p <= 7; p++) {
+    html += `<tr><td class="font-bold text-muted bg-light">${p}</td>`;
+    for (let d = 1; d <= 5; d++) {
+      let colIndex = (d - 1) * 7 + p;
+      let excludedTeachers = [];
+      for (let t in exclusions) {
+        if (exclusions[t] && exclusions[t].includes(colIndex)) {
+          excludedTeachers.push(t);
+          hasAnyExclusion = true;
+        }
+      }
+      let dCls = d===1 ? "day-mon" : d===2 ? "day-tue" : d===3 ? "day-wed" : d===4 ? "day-thu" : "day-fri";
+      html += `<td class="${dCls} text-danger font-bold" style="white-space: pre-wrap; word-break: keep-all;">${excludedTeachers.join(', ')}</td>`;
     }
+    html += `</tr>`;
   }
   html += `</tbody></table>`;
   
-  sumArea.innerHTML = count === 0 ? `<div class="text-muted">설정된 교체 불가 내역이 없습니다.</div>` : html;
+  sumArea.innerHTML = !hasAnyExclusion ? `<div class="text-muted">설정된 교체 불가 내역이 없습니다.</div>` : html;
 };
 
 document.getElementById("btn-clear-all-exclusions").addEventListener("click", () => {

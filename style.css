@@ -1,4 +1,4 @@
-﻿@import url('https://cdn.jsdelivr.net/gh/orioncactus/pretendard/dist/web/static/pretendard.css');
+@import url('https://cdn.jsdelivr.net/gh/orioncactus/pretendard/dist/web/static/pretendard.css');
 
 :root {
   --primary-color: #0d6efd;
@@ -395,5 +395,26 @@ body {
   .modal-content {
     width: 95%;
     padding: 1rem;
-  }
+}
+
+/* 모달 오버레이 수정 */
+.modal-overlay {
+  position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+  background: rgba(0,0,0,0.5);
+  display: none; align-items: center; justify-content: center;
+  z-index: 1000;
+  backdrop-filter: blur(5px);
+}
+.modal-overlay.active {
+  display: flex;
+}
+
+/* 학기 버튼 강조 */
+.semester-btn { transition: all 0.3s ease; }
+.semester-btn.active {
+  background-color: var(--primary-color) !important;
+  color: white !important;
+  box-shadow: 0 4px 15px rgba(13, 110, 253, 0.4);
+  transform: translateY(-2px);
+  font-weight: bold;
 }
