@@ -704,29 +704,64 @@ if (btnFindMeeting) {
     }
     
     let commonFree = [];
+    let reasonsHtml = `<ul class="list-group list-group-flush mt-3" style="font-size: 0.85rem; text-align: left;">`;
+    let hasReasons = false;
+
     for (let i = 1; i < headerRow.length; i++) {
       let isAllFree = true;
+      let reasonsForPeriod = [];
+      
       for (let t of selected) {
         let row = fullData.find(r => r[0] === t);
-        if (!row || !isFree(row[i]) || isExcluded(t, i)) {
+        if (!row) {
           isAllFree = false;
-          break;
+          reasonsForPeriod.push(`[${t}] 데이터 없음`);
+          continue;
+        }
+        
+        let subj = row[i];
+        if (!isFree(subj)) {
+          isAllFree = false;
+          reasonsForPeriod.push(`[${t}] ${formatSubject(subj)}`);
+        }
+        if (isExcluded(t, i)) {
+          isAllFree = false;
+          reasonsForPeriod.push(`[${t}] 교체 불가`);
         }
       }
+      
       if (isAllFree) {
         commonFree.push(headerRow[i]);
+      } else {
+        hasReasons = true;
+        reasonsHtml += `<li class="list-group-item bg-transparent border-0 py-1">
+          <strong>${headerRow[i]}:</strong> <span class="text-muted">${reasonsForPeriod.join(', ')}</span>
+        </li>`;
       }
     }
+    reasonsHtml += `</ul>`;
     
+    let html = "";
     if (commonFree.length > 0) {
-      meetingResultArea.innerHTML = `<div class="alert alert-success m-0 font-bold">
+      html += `<div class="alert alert-success m-0 font-bold mb-3">
         <i class="bi bi-check-circle-fill"></i> 모두 공강인 시간: ${commonFree.join(", ")}
       </div>`;
     } else {
-      meetingResultArea.innerHTML = `<div class="alert alert-warning m-0 font-bold">
+      html += `<div class="alert alert-warning m-0 font-bold mb-3">
         <i class="bi bi-exclamation-triangle-fill"></i> 모두 공강인 시간이 없습니다.
       </div>`;
     }
+    
+    if (hasReasons) {
+      html += `<div class="mt-2 text-start bg-white p-3 border rounded shadow-sm">
+        <h6 class="font-bold text-primary mb-2 border-bottom pb-2"><i class="bi bi-info-circle"></i> 공강이 아닌 사유 (전체 교시)</h6>
+        <div style="max-height: 200px; overflow-y: auto;">
+          ${reasonsHtml}
+        </div>
+      </div>`;
+    }
+    
+    meetingResultArea.innerHTML = html;
     updateMeetingPreview();
   });
 }
