@@ -48,7 +48,7 @@ body {
 .d-flex { display: flex; }
 .d-block { display: block; }
 .flex-column { flex-direction: column !important; }
-.flex-1 { flex: 1; }
+.flex-1 { flex: 1; min-width: 0; }
 .justify-center { justify-content: center; }
 .justify-between { justify-content: space-between; }
 .align-center { align-items: center; }
@@ -226,6 +226,7 @@ body {
 /* 메인 컨텐�??�역 */
 .main-content {
   flex: 1;
+  min-width: 0;
   display: flex;
   flex-direction: column;
   overflow-y: auto;
