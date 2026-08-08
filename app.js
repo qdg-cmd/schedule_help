@@ -976,14 +976,14 @@ window.copyHwpTable = () => {
         <td>${myNum}</td>
         <td>${myClass}</td>
         <td>${mySubj}</td>
-        <td>${c.myName}</td>
+        <td>${c.myName.split(' ')[0]}</td>
         <td>${arrow}</td>
         <td></td>
         <td>${pDay}</td>
         <td>${pNum}</td>
         <td>${pClass}</td>
         <td>${pSubj}</td>
-        <td>${c.partnerName}</td>
+        <td>${c.partnerName.split(' ')[0]}</td>
       </tr>
     `;
   });
@@ -1095,14 +1095,14 @@ function renderCartTab() {
         <td style="border: 1px solid black; padding: 4px;">${myNum}</td>
         <td style="border: 1px solid black; padding: 4px;">${myClass}</td>
         <td style="border: 1px solid black; padding: 4px;">${mySubj}</td>
-        <td style="border: 1px solid black; padding: 4px;">${c.myName}</td>
+        <td style="border: 1px solid black; padding: 4px;">${c.myName.split(' ')[0]}</td>
         <td style="border: 1px solid black; padding: 4px;">${arrow}</td>
         <td style="border: 1px solid black; padding: 4px;"></td>
         <td style="border: 1px solid black; padding: 4px;">${pDay}</td>
         <td style="border: 1px solid black; padding: 4px;">${pNum}</td>
         <td style="border: 1px solid black; padding: 4px;">${pClass}</td>
         <td style="border: 1px solid black; padding: 4px;">${pSubj}</td>
-        <td style="border: 1px solid black; padding: 4px;">${c.partnerName}</td>
+        <td style="border: 1px solid black; padding: 4px;">${c.partnerName.split(' ')[0]}</td>
       </tr>
     `;
   });
@@ -1114,8 +1114,8 @@ function renderCartTab() {
     let typeBadge = c.type === 'swap' ? '<span class="badge bg-success">교체</span>' : '<span class="badge bg-info">대강</span>';
     html += `<tr>
       <td>${typeBadge}</td>
-      <td class="font-bold">${c.myName}</td>
-      <td class="text-primary font-bold">${c.partnerName}</td>
+      <td class="font-bold">${c.myName.split(' ')[0]}</td>
+      <td class="text-primary font-bold">${c.partnerName.split(' ')[0]}</td>
       <td>${c.myPeriod}<br><small>${c.mySubject}</small></td>
       <td>${c.type==='swap' ? c.partnerPeriod+'<br><small>'+c.partnerSubject+'</small>' : '-'}</td>
       <td><button class="btn btn-sm btn-outline-danger" onclick="removeFromCart('${c.id}')">삭제</button></td>
