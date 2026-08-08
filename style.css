@@ -521,3 +521,14 @@ body {
   .nav-item { font-size: 1rem !important; }
 }
 
+/* PC 화면에서는 모바일 전용 요소 숨김 */
+.d-md-none { display: none !important; }
+.mobile-day-selector { display: none !important; }
+.mobile-header { display: none !important; }
+
+/* 모바일 화면에서는 모바일 전용 요소 보임 */
+@media (max-width: 768px) {
+  .d-md-none { display: block !important; }
+  .mobile-day-selector { display: block !important; }
+  .mobile-header { display: flex !important; }
+}
