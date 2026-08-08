@@ -931,24 +931,96 @@ document.getElementById("btn-clear-cart").addEventListener("click", () => {
 });
 
 window.copyHwpTable = () => {
-  const container = document.getElementById("hwp-table-container");
-  if (!container) return;
+  const cart = localState[`semester${currentSemester}`].cart;
+  if (!cart || cart.length === 0) {
+    alert("복사할 내용이 없습니다.");
+    return;
+  }
+  
+  const tempDiv = document.createElement("div");
+  tempDiv.style.position = "absolute";
+  tempDiv.style.left = "-9999px";
+  
+  let tableHtml = `<table border="1" style="border-collapse: collapse;"><tbody>`;
+  
+  cart.forEach(c => {
+    let typeStr = c.type === 'swap' ? '수업교체' : '결보강';
+    let myDay = c.myPeriod.replace(/[0-9]/g, '');
+    let myNum = c.myPeriod.replace(/[^0-9]/g, '');
+    
+    let parsedMy = parseSubjectAndClass(c.mySubject);
+    let myClass = parsedMy.cls;
+    let mySubj = parsedMy.subj;
+    
+    let pDay = "", pNum = "", pClass = "", pSubj = "";
+    let arrow = c.type === 'swap' ? "↔" : "→";
+    
+    if (c.type === 'swap') {
+      pDay = c.partnerPeriod.replace(/[0-9]/g, '');
+      pNum = c.partnerPeriod.replace(/[^0-9]/g, '');
+      let parsedP = parseSubjectAndClass(c.partnerSubject);
+      pClass = parsedP.cls;
+      pSubj = parsedP.subj;
+    } else {
+      pDay = myDay;
+      pNum = myNum;
+      pClass = myClass;
+      pSubj = mySubj;
+    }
+    
+    tableHtml += `
+      <tr>
+        <td>${typeStr}</td>
+        <td></td>
+        <td>${myDay}</td>
+        <td>${myNum}</td>
+        <td>${myClass}</td>
+        <td>${mySubj}</td>
+        <td>${c.myName}</td>
+        <td>${arrow}</td>
+        <td></td>
+        <td>${pDay}</td>
+        <td>${pNum}</td>
+        <td>${pClass}</td>
+        <td>${pSubj}</td>
+        <td>${c.partnerName}</td>
+      </tr>
+    `;
+  });
+  
+  tableHtml += `</tbody></table>`;
+  tempDiv.innerHTML = tableHtml;
+  document.body.appendChild(tempDiv);
+  
   const range = document.createRange();
-  range.selectNode(container);
-  window.getSelection().removeAllRanges();
-  window.getSelection().addRange(range);
+  range.selectNodeContents(tempDiv);
+  const sel = window.getSelection();
+  sel.removeAllRanges();
+  sel.addRange(range);
+  
   try {
     document.execCommand('copy');
-    alert("한글(HWP) 복사가 완료되었습니다. Ctrl+V로 붙여넣으세요.");
-  } catch (err) { alert("복사 실패"); }
-  window.getSelection().removeAllRanges();
+    alert("데이터 행만 복사되었습니다. 한글(HWP) 표 안의 첫 번째 칸을 클릭하고 덮어쓰기로 붙여넣기(Ctrl+V) 하세요.");
+  } catch (err) { 
+    alert("복사 실패: " + err); 
+  }
+  
+  sel.removeAllRanges();
+  document.body.removeChild(tempDiv);
 };
 
-function parseSubjectForHwp(rawStr) {
-  if (!rawStr) return "";
-  let s = rawStr.replace(/<br>/g, " ");
-  s = s.replace(/<[^>]*>?/gm, '');
-  return s.trim();
+function parseSubjectAndClass(rawStr) {
+  if (!rawStr) return { cls: "", subj: "" };
+  let s = rawStr.replace(/<br>/g, " ").replace(/<[^>]*>?/gm, '').trim();
+  let m = s.match(/^(\d{3})\s*(.*)$/);
+  if (m) {
+    let digits = m[1];
+    let rest = m[2].trim();
+    let cls = digits.charAt(0) + "-" + parseInt(digits.substring(1), 10);
+    return { cls: cls, subj: rest };
+  } else {
+    return { cls: "", subj: s };
+  }
 }
 
 function renderCartTab() {
@@ -963,7 +1035,7 @@ function renderCartTab() {
   let html = `
     <div class="mb-3 text-end">
       <button class="btn btn-sm btn-outline-primary" onclick="copyHwpTable()"><i class="bi bi-clipboard-check"></i> 한글 양식 복사하기</button>
-      <p class="text-muted text-sm mt-1">※ '한글 양식 복사하기' 버튼을 누른 후 한글(HWP)에 붙여넣기(Ctrl+V) 하세요.</p>
+      <p class="text-muted text-sm mt-1">※ 한글(HWP) 표 안의 첫 번째 칸을 클릭하고 셀 덮어쓰기로 붙여넣기(Ctrl+V) 하세요.</p>
     </div>
     <div id="hwp-table-container" style="padding: 20px; background: white; color: black; border: 1px solid #ccc; overflow-x: auto;">
       <div style="font-size: 16pt; font-weight: bold; text-align: center; margin-bottom: 20px;">결보강 및 수업교체 계획</div>
@@ -994,12 +1066,10 @@ function renderCartTab() {
     let typeStr = c.type === 'swap' ? '수업교체' : '결보강';
     let myDay = c.myPeriod.replace(/[0-9]/g, '');
     let myNum = c.myPeriod.replace(/[^0-9]/g, '');
-    let myParsed = parseSubjectForHwp(c.mySubject);
-    let myClass = "";
-    let mySubj = myParsed;
     
-    let m = myParsed.match(/(^\d학년\s*\d반)\s*(.+)$/);
-    if (m) { myClass = m[1]; mySubj = m[2]; }
+    let parsedMy = parseSubjectAndClass(c.mySubject);
+    let myClass = parsedMy.cls;
+    let mySubj = parsedMy.subj;
     
     let pDay = "", pNum = "", pClass = "", pSubj = "";
     let arrow = c.type === 'swap' ? "↔" : "→";
@@ -1007,10 +1077,14 @@ function renderCartTab() {
     if (c.type === 'swap') {
       pDay = c.partnerPeriod.replace(/[0-9]/g, '');
       pNum = c.partnerPeriod.replace(/[^0-9]/g, '');
-      let pParsed = parseSubjectForHwp(c.partnerSubject);
-      pSubj = pParsed;
-      let pm = pParsed.match(/(^\d학년\s*\d반)\s*(.+)$/);
-      if (pm) { pClass = pm[1]; pSubj = pm[2]; }
+      let parsedP = parseSubjectAndClass(c.partnerSubject);
+      pClass = parsedP.cls;
+      pSubj = parsedP.subj;
+    } else {
+      pDay = myDay;
+      pNum = myNum;
+      pClass = myClass;
+      pSubj = mySubj;
     }
     
     html += `
