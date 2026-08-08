@@ -329,11 +329,11 @@ body {
 }
 
 /* ?�일 배경??*/
-.day-mon { background: rgba(255, 235, 238, 0.7); }
-.day-tue { background: rgba(255, 243, 224, 0.7); }
-.day-wed { background: rgba(232, 245, 233, 0.7); }
-.day-thu { background: rgba(227, 242, 253, 0.7); }
-.day-fri { background: rgba(232, 234, 246, 0.7); }
+.day-mon { background: rgba(255, 235, 238, 0.7) !important; }
+.day-tue { background: rgba(255, 243, 224, 0.7) !important; }
+.day-wed { background: rgba(232, 245, 233, 0.7) !important; }
+.day-thu { background: rgba(227, 242, 253, 0.7) !important; }
+.day-fri { background: rgba(232, 234, 246, 0.7) !important; }
 .day-border { border-right: 2px solid rgba(0,0,0,0.2) !important; }
 
 @keyframes pulse {
