@@ -1,5 +1,5 @@
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.0/firebase-app.js";
-import { getFirestore, doc, getDoc, setDoc } from "https://www.gstatic.com/firebasejs/10.7.0/firebase-firestore.js";
+import { getFirestore, doc, getDoc, setDoc, collection, getDocs, writeBatch, deleteDoc } from "https://www.gstatic.com/firebasejs/10.7.0/firebase-firestore.js";
 
 // Firebase Configuration
 const firebaseConfig = {
@@ -15,11 +15,12 @@ const app = initializeApp(firebaseConfig);
 const db = getFirestore(app);
 
 // State
-let currentSemester = "1";
+let currentSemester = "1"; // default 1
 let fullData = [];
 let headerRow = [];
 let teachers = [];
 
+// Local Storage State
 let localState = {
   appPassword: "",
   semester1: { selectedTeachers: [], exclusions: {}, cart: [] },
@@ -43,17 +44,6 @@ const btnAdminLogin = document.getElementById("btn-admin-login");
 const cutoffInput = document.getElementById("semester-cutoff-date");
 const btnSaveCutoff = document.getElementById("btn-save-cutoff");
 
-const btnMobileMenu = document.getElementById("btn-mobile-menu");
-const btnCloseSidebar = document.getElementById("btn-close-sidebar");
-const sidebar = document.getElementById("sidebar");
-
-if (btnMobileMenu && sidebar) {
-  btnMobileMenu.addEventListener("click", () => sidebar.classList.add("show"));
-}
-if (btnCloseSidebar && sidebar) {
-  btnCloseSidebar.addEventListener("click", () => sidebar.classList.remove("show"));
-}
-
 // Navigation
 document.querySelectorAll(".nav-item").forEach(item => {
   item.addEventListener("click", (e) => {
@@ -64,7 +54,6 @@ document.querySelectorAll(".nav-item").forEach(item => {
     item.classList.add("active");
     const target = document.getElementById(item.getAttribute("data-target"));
     if (target) target.classList.remove("hidden");
-    if (sidebar) sidebar.classList.remove("show");
   });
 });
 
@@ -76,16 +65,15 @@ document.querySelector(".admin-nav").addEventListener("click", (e) => {
   document.getElementById("tab-admin").classList.remove("hidden");
   
   if (!sessionStorage.getItem("adminAuth")) {
-    document.getElementById("admin-auth-area").classList.remove("hidden");
+    document.getElementById("admin-login-area").classList.remove("hidden");
     document.getElementById("admin-dashboard").classList.add("hidden");
   } else {
-    document.getElementById("admin-auth-area").classList.add("hidden");
+    document.getElementById("admin-login-area").classList.add("hidden");
     document.getElementById("admin-dashboard").classList.remove("hidden");
   }
-  if (sidebar) sidebar.classList.remove("show");
 });
 
-// Init
+// Initialize App
 async function init() {
   const saved = localStorage.getItem("timetableAppState");
   if (saved) {
@@ -100,22 +88,15 @@ async function init() {
     }
   }
   
-  try {
-    const docSnap = await getDoc(doc(db, "settings", "general"));
-    if (docSnap.exists() && docSnap.data().semesterCutoff) {
-      localState.semesterCutoff = docSnap.data().semesterCutoff;
-      saveLocalState();
-    }
-  } catch(e) {}
-  
   if (cutoffInput) cutoffInput.value = localState.semesterCutoff;
   autoSelectSemester();
   
-  if (localState.appPassword === "2026") {
-    authOverlay.classList.add("hidden");
-    mainApp.classList.remove("hidden");
-    await loadDataForSemester();
-  }
+  // 비밀번호 자동 로그인 기능 제거 (매번 입력하도록 강제)
+  // if (localState.appPassword === "2026") {
+  //   authOverlay.classList.add("hidden");
+  //   mainApp.classList.remove("hidden");
+  //   await loadDataForSemester();
+  // }
 }
 
 function saveLocalState() {
@@ -140,6 +121,7 @@ appPwdInput.addEventListener("keyup", (e) => {
   if (e.key === "Enter") btnLogin.click();
 });
 
+// Reset Local Settings
 document.getElementById("btn-reset-local").addEventListener("click", () => {
   if (confirm("개인 설정(선택된 교사, 교체 불가 설정, 결보강 장바구니)을 초기화하시겠습니까?")) {
     localState.semester1 = { selectedTeachers: [], exclusions: {}, cart: [] };
@@ -150,15 +132,17 @@ document.getElementById("btn-reset-local").addEventListener("click", () => {
   }
 });
 
-// Semester
-const semesterSelect = document.getElementById("semester-select");
-if (semesterSelect) {
-  semesterSelect.addEventListener("change", async (e) => {
-    currentSemester = parseInt(e.target.value);
+// Semester Change
+document.querySelectorAll(".semester-btn").forEach(btn => {
+  btn.addEventListener("click", async (e) => {
+    currentSemester = parseInt(e.target.dataset.sem);
+    document.querySelectorAll(".semester-btn").forEach(b => b.classList.remove("active"));
+    e.target.classList.add("active");
     await loadDataForSemester();
   });
-}
+});
 
+// Data Loading
 async function loadDataForSemester() {
   const tableSwap = document.getElementById("table-swap");
   const tableCover = document.getElementById("table-cover");
@@ -169,9 +153,12 @@ async function loadDataForSemester() {
   try {
     const docRef = doc(db, `semester_${currentSemester}`, "timetable");
     const docSnap = await getDoc(docRef);
+    
     if (docSnap.exists()) {
       let data = docSnap.data().data;
-      if (typeof data === 'string') data = JSON.parse(data);
+      if (typeof data === 'string') {
+        data = JSON.parse(data);
+      }
       if (data && data.length > 0) {
         processRawData(data);
         renderTimetables();
@@ -185,27 +172,43 @@ async function loadDataForSemester() {
       showNoData();
     }
   } catch(e) {
+    console.error(e);
     showNoData();
   }
 }
 
 function autoSelectSemester() {
   const today = new Date();
+  const year = today.getFullYear();
   let cutoff = localState.semesterCutoff || "08-10";
   let parts = cutoff.split("-");
-  const cutoffTime = new Date(today.getFullYear(), parseInt(parts[0])-1, parseInt(parts[1])).getTime();
+  let cutoffMonth = parseInt(parts[0], 10) - 1;
+  let cutoffDate = parseInt(parts[1], 10);
   
-  if (today.getTime() >= cutoffTime) currentSemester = 2;
-  else currentSemester = 1;
+  const cutoffTime = new Date(year, cutoffMonth, cutoffDate).getTime();
+  const currentTime = today.getTime();
   
-  if (semesterSelect) semesterSelect.value = currentSemester.toString();
+  if (currentTime >= cutoffTime) {
+    currentSemester = 2;
+  } else {
+    currentSemester = 1;
+  }
+  
+  document.querySelectorAll(".semester-btn").forEach(b => {
+    b.classList.remove("active");
+    if(parseInt(b.getAttribute("data-sem")) === currentSemester) {
+      b.classList.add("active");
+    }
+  });
 }
 
 function showNoData() {
   const emptyHtml = `<div class="text-center py-5 text-muted">저장된 시간표 데이터가 없습니다. 관리자 탭에서 데이터를 업로드하세요.</div>`;
   document.getElementById("table-swap").innerHTML = emptyHtml;
   document.getElementById("table-cover").innerHTML = emptyHtml;
-  fullData = []; headerRow = []; teachers = [];
+  fullData = [];
+  headerRow = [];
+  teachers = [];
 }
 
 function processRawData(rawData) {
@@ -234,6 +237,7 @@ function processRawData(rawData) {
       header[j] = `${currentDay}${pCount}`;
     }
   }
+
   fullData = rawData;
   headerRow = fullData[0];
   teachers = fullData.slice(1).map(row => row[0]).filter(name => name);
@@ -243,14 +247,16 @@ function processRawData(rawData) {
 function isFree(val) {
   if (!val) return true;
   let v = String(val).trim().toLowerCase();
-  return v === "" || v === "횞" || v === "x" || v === "×";
+  return v === "" || v === "×" || v === "x";
 }
 
 function formatSubject(val) {
   if (!val) return "";
   let str = String(val).trim();
   let match = str.match(/^(\d+)\s*(.+)$/);
-  if (match) return `${match[1]}<br>${match[2]}`;
+  if (match) {
+    return `${match[1]}<br>${match[2]}`;
+  }
   return str;
 }
 
@@ -259,39 +265,44 @@ function isExcluded(teacherName, colIndex) {
   return exclusions[teacherName] && exclusions[teacherName].includes(colIndex);
 }
 
+// Render Timetables
 function renderTimetables() {
   document.getElementById("table-swap").innerHTML = generateTableHtml("analyzeSwap");
   document.getElementById("table-cover").innerHTML = generateTableHtml("analyzeCover");
   
   const searchSwap = document.getElementById("search-swap");
   const searchCover = document.getElementById("search-cover");
-  if (searchSwap) searchSwap.addEventListener("input", (e) => highlightRow("table-swap", e.target.value));
-  if (searchCover) searchCover.addEventListener("input", (e) => highlightRow("table-cover", e.target.value));
+  
+  searchSwap.addEventListener("input", (e) => highlightRow("table-swap", e.target.value));
+  searchCover.addEventListener("input", (e) => highlightRow("table-cover", e.target.value));
 }
 
 function highlightRow(containerId, kw) {
   kw = kw.trim();
   document.querySelectorAll(`#${containerId} tbody tr`).forEach(tr => {
     let nameTd = tr.querySelector('td:first-child');
-    if (nameTd && kw !== "" && nameTd.innerText.includes(kw)) {
+    if (kw !== "" && nameTd.innerText.includes(kw)) {
       tr.classList.add("my-row-highlight");
+      tr.style.backgroundColor = "rgba(255, 193, 7, 0.2)";
     } else {
       tr.classList.remove("my-row-highlight");
+      tr.style.backgroundColor = "";
     }
   });
 }
 
 function generateTableHtml(actionFunc) {
   if (fullData.length === 0) return "";
+  
   let html = `<table class="table"><thead><tr>`;
   let dayClasses = [];
 
   for (let j = 0; j < headerRow.length; j++) {
-    let hStr = headerRow[j] || "";
+    let hStr = headerRow[j];
     let dCls = hStr.includes("월") ? "day-mon" : hStr.includes("화") ? "day-tue" :
                hStr.includes("수") ? "day-wed" : hStr.includes("목") ? "day-thu" :
                hStr.includes("금") ? "day-fri" : "";
-    let bCls = (j > 0 && j < headerRow.length - 1 && hStr.replace(/[0-9]/g, '') !== (headerRow[j+1]||"").replace(/[0-9]/g, '')) ? "day-border" : (j === headerRow.length -1 ? "day-border" : "");
+    let bCls = (j > 0 && j < headerRow.length - 1 && hStr.replace(/[0-9]/g, '') !== headerRow[j+1].replace(/[0-9]/g, '')) ? "day-border" : (j === headerRow.length -1 ? "day-border" : "");
     dayClasses[j] = `${dCls} ${bCls}`;
     html += `<th class="${dayClasses[j]}">${hStr}</th>`;
   }
@@ -315,43 +326,26 @@ function generateTableHtml(actionFunc) {
   return html;
 }
 
+// Delegate events for table cells
 document.addEventListener("click", (e) => {
   let td = e.target.closest("td[data-action]");
   if (td) {
     let action = td.dataset.action;
     let row = parseInt(td.dataset.row);
     let col = parseInt(td.dataset.col);
-    if (action === "analyzeSwap") analyzeSwap(row, col);
-    if (action === "analyzeCover") analyzeCover(row, col);
-    if (action === "toggleExclusion") toggleExclusionCell(fullData[row][0], col);
-  }
-  
-  if (e.target.closest(".btn-add-cart")) {
-    const btn = e.target.closest(".btn-add-cart");
-    addToCart({
-      type: btn.dataset.type,
-      myName: btn.dataset.myname,
-      myPeriod: btn.dataset.myperiod,
-      mySubject: btn.dataset.mysubj,
-      partnerName: btn.dataset.pname,
-      partnerPeriod: btn.dataset.pperiod,
-      partnerSubject: btn.dataset.psubj,
-      id: Date.now().toString()
-    });
-    alert("장바구니에 담겼습니다.");
-    modal.classList.add("hidden");
+    if (action === "analyzeSwap") analyzeSwap(row, col, td);
+    if (action === "analyzeCover") analyzeCover(row, col, td);
   }
 });
 
-function analyzeSwap(row, col) {
+function analyzeSwap(row, col, tdEl) {
   const rawSubject = fullData[row][col];
   if (isFree(rawSubject) || isExcluded(fullData[row][0], col)) return;
 
   const myName = fullData[row][0];
   const myPeriod = headerRow[col];
-  const strSubject = String(rawSubject);
-  const classIdMatch = strSubject.match(/^\d+/);
-  const searchTarget = classIdMatch ? classIdMatch[0] : strSubject.trim();
+  const classIdMatch = rawSubject.match(/^\d+/);
+  const searchTarget = classIdMatch ? classIdMatch[0] : rawSubject.trim();
   
   const partners = [];
   for (let r = 1; r < fullData.length; r++) {
@@ -361,16 +355,15 @@ function analyzeSwap(row, col) {
     
     for (let c = 1; c < fullData[r].length; c++) {
       const pSubject = fullData[r][c];
-      const strPSubject = String(pSubject);
-      if (!isFree(strPSubject) && strPSubject.includes(searchTarget) && isFree(fullData[row][c])) {
+      if (!isFree(pSubject) && pSubject.includes(searchTarget) && isFree(fullData[row][c])) {
         partners.push({ name: pName, pPeriod: headerRow[c], pSubject: pSubject, pRow: r, pCol: c });
       }
     }
   }
-  showModal("수업 교체 매칭 결과", partners, 'swap', myName, myPeriod, rawSubject, row, col);
+  showModal("수업 교체 매칭 결과", partners, 'swap', myName, myPeriod, rawSubject);
 }
 
-function analyzeCover(row, col) {
+function analyzeCover(row, col, tdEl) {
   const rawSubject = fullData[row][col];
   if (isFree(rawSubject) || isExcluded(fullData[row][0], col)) return;
 
@@ -384,149 +377,586 @@ function analyzeCover(row, col) {
       partners.push({ name: fullData[r][0], pRow: r, pCol: col });
     }
   }
-  showModal("대강 매칭 결과", partners, 'cover', myName, myPeriod, rawSubject, row, col);
+  showModal("대강 매칭 결과", partners, 'cover', myName, myPeriod, rawSubject);
 }
 
-function showModal(title, partners, mode, myName, myPeriod, rawSubject, row, col) {
+function showModal(title, partners, mode, myName, myPeriod, rawSubject) {
   modalTitle.textContent = title;
   
   if (partners.length === 0) {
     modalBody.innerHTML = `<div class="text-center text-muted py-4">가능한 교사가 없습니다.</div>`;
-    modal.classList.remove("hidden");
+    modal.classList.add("active");
     return;
   }
   
   let html = `<div class="d-flex flex-column gap-3">`;
-  partners.forEach(p => {
-    let previewTable = '';
-    if (mode === 'swap') {
-      html += `
-        <div class="glass-panel mb-2" style="background: rgba(13, 110, 253, 0.05); border-color: var(--primary-color);">
-          <h4 class="text-primary mb-2 d-flex justify-between align-center">
-            <span><i class="bi bi-check-circle-fill"></i> ${p.name} 선생님과 교체 가능</span>
-            <button class="btn btn-sm btn-outline-primary btn-add-cart" data-type="swap" data-myname="${myName}" data-myperiod="${myPeriod}" data-mysubj="${rawSubject}" data-pname="${p.name}" data-pperiod="${p.pPeriod}" data-psubj="${p.pSubject}">장바구니 담기</button>
-          </h4>
-          <div class="text-center font-bold" style="font-size: 1.1rem; margin-bottom: 15px;">
-            나의 <span class="text-danger">${myPeriod} [${rawSubject}]</span> ↔ ${p.name}T의 <span class="text-primary">${p.pPeriod} [${p.pSubject}]</span>
+  partners.forEach((p, idx) => {
+    let cardHtml = `
+      <div class="glass-panel" style="border: 1px solid #ccc; border-radius: 8px; padding: 15px; background: white;">
+        <h5 class="text-success font-bold mb-3"><i class="bi bi-check-circle-fill"></i> ${p.name} 선생님과 ${mode === 'swap' ? '교체' : '대강'} 가능</h5>
+        
+        <div class="d-flex justify-between align-center mb-3" style="background-color: #eef2ff; border: 1px solid #c7d2fe; border-radius: 8px; padding: 10px 20px;">
+          <div class="flex-1 text-center font-bold" style="font-size: 1.1rem;">
+            나의 <span class="text-danger">${myPeriod} [${rawSubject}]</span> ↔ 
+            ${mode === 'swap' ? `${p.name}T의 <span class="text-primary">${p.pPeriod} [${p.pSubject}]</span>` : `<span class="text-primary">${p.name} 선생님</span>께`} 
+            ${mode === 'swap' ? '교체' : '대강'} 요청
           </div>
-          ${buildPreviewTableSwap(myName, p.name, row, col, p.pRow, p.pCol, rawSubject, p.pSubject)}
+          <button class="btn btn-sm btn-primary btn-add-cart ms-3" style="min-width: 120px;" 
+                  data-type="${mode}" data-myname="${myName}" data-myperiod="${myPeriod}" data-mysubj="${rawSubject}" 
+                  data-pname="${p.name}" data-pperiod="${p.pPeriod || ''}" data-psubj="${p.pSubject || ''}">
+            <i class="bi bi-cart-plus"></i> 장바구니 담기
+          </button>
         </div>
-      `;
-    } else {
-      html += `
-        <div class="glass-panel mb-2" style="background: rgba(13, 110, 253, 0.05); border-color: var(--primary-color);">
-          <h4 class="text-primary mb-2 d-flex justify-between align-center">
-            <span><i class="bi bi-check-circle-fill"></i> ${p.name} 선생님</span>
-            <button class="btn btn-sm btn-outline-info btn-add-cart" data-type="cover" data-myname="${myName}" data-myperiod="${myPeriod}" data-mysubj="${rawSubject}" data-pname="${p.name}" data-pperiod="" data-psubj="">장바구니 담기</button>
-          </h4>
-          <div class="text-center font-bold" style="font-size: 1.1rem; margin-bottom: 15px;">
-            나의 <span class="text-danger">${myPeriod} [${rawSubject}]</span> → <span class="text-primary">${p.name} 선생님</span>에게 대강 요청
-          </div>
-          ${buildPreviewTableCover(myName, p.name, row, p.pRow, col, rawSubject)}
+        
+        <div style="overflow-x: hidden; width: 100%;">
+          <table class="table table-sm table-bordered text-center" style="font-size: 0.75rem; width: 100%; table-layout: fixed; margin-bottom: 0; word-break: keep-all;">
+            <thead class="bg-light">
+              <tr>
+                <th style="width: 50px;">교사</th>
+                ${headerRow.slice(1).map(h => `<th class="${getDayClass(h)}">${h}</th>`).join('')}
+              </tr>
+            </thead>
+            <tbody>
+              <!-- 나의 시간표 -->
+              <tr>
+                <td class="font-bold bg-light" style="vertical-align: middle;">${myName}</td>
+                ${headerRow.slice(1).map(h => {
+                  let subj = getTeacherSubject(myName, h) || "";
+                  let display = isFree(subj) ? "" : formatSubject(subj);
+                  let cellStyle = "";
+                  
+                  if (h === myPeriod) {
+                    cellStyle = "background-color: #dc3545 !important; color: white !important; font-weight: bold;";
+                  } else if (mode === 'swap' && h === p.pPeriod) {
+                    cellStyle = "background-color: #0d6efd !important; color: white !important; font-weight: bold;";
+                    display = "공강";
+                  }
+                  return `<td class="${getDayClass(h)}" style="${cellStyle}">${display}</td>`;
+                }).join('')}
+              </tr>
+              <!-- 상대방 시간표 -->
+              <tr>
+                <td class="font-bold bg-light" style="vertical-align: middle;">${p.name}</td>
+                ${headerRow.slice(1).map(h => {
+                  let subj = getTeacherSubject(p.name, h) || "";
+                  let display = isFree(subj) ? "" : formatSubject(subj);
+                  let cellStyle = "";
+                  
+                  if (h === myPeriod) {
+                    cellStyle = "background-color: #0d6efd !important; color: white !important; font-weight: bold;";
+                    display = "공강";
+                  } else if (mode === 'swap' && h === p.pPeriod) {
+                    cellStyle = "background-color: #dc3545 !important; color: white !important; font-weight: bold;";
+                  }
+                  return `<td class="${getDayClass(h)}" style="${cellStyle}">${display}</td>`;
+                }).join('')}
+              </tr>
+            </tbody>
+          </table>
         </div>
-      `;
-    }
+      </div>
+    `;
+    html += cardHtml;
   });
   html += `</div>`;
   modalBody.innerHTML = html;
-  modal.classList.remove("hidden");
+  
+  modalBody.querySelectorAll(".btn-add-cart").forEach(btn => {
+    btn.addEventListener("click", () => {
+      addToCart(
+        btn.dataset.type,
+        btn.dataset.myname,
+        btn.dataset.myperiod,
+        btn.dataset.mysubj,
+        btn.dataset.pname,
+        btn.dataset.pperiod,
+        btn.dataset.psubj
+      );
+    });
+  });
+
+  // (Timetable toggles removed since they are now always visible)
+  
+  modal.classList.add("active");
 }
 
-function buildPreviewTableSwap(myName, pName, row, col, pRow, pCol, rawSubject, pSubject) {
-  let pt = `<table class="table" style="width:100%;"><thead><tr>`;
-  let dayClasses = [];
-  for(let j = 1; j < headerRow.length; j++) {
-    let hStr = headerRow[j];
-    let dCls = hStr.includes("월") ? "day-mon" : hStr.includes("화") ? "day-tue" :
-               hStr.includes("수") ? "day-wed" : hStr.includes("목") ? "day-thu" :
-               hStr.includes("금") ? "day-fri" : "";
-    let bCls = (j > 1 && j < headerRow.length - 1 && hStr.replace(/[0-9]/g, '') !== headerRow[j+1].replace(/[0-9]/g, '')) ? "day-border" : (j === headerRow.length -1 ? "day-border" : "");
-    dayClasses[j] = `${dCls} ${bCls}`;
-    let thClass = (j === col || j === pCol) ? 'bg-warning text-dark' : '';
-    pt += `<th class="${dayClasses[j]} ${thClass}">${headerRow[j]}</th>`;
+function generatePartnerTimetableHtml(teacherName) {
+  let html = `<table class="table table-sm text-center" style="font-size: 0.85rem;">
+    <thead>
+      <tr>
+        <th style="width: 40px;">교시</th>
+        <th class="day-mon">월</th><th class="day-tue">화</th><th class="day-wed">수</th><th class="day-thu">목</th><th class="day-fri">금</th>
+      </tr>
+    </thead>
+    <tbody>
+  `;
+  for (let r = 1; r <= 7; r++) {
+    html += `<tr><td class="font-bold text-muted bg-light">${r}</td>`;
+    for (let c = 1; c <= 5; c++) {
+      let subj = getTeacherSubject(teacherName, r, c) || "";
+      let dCls = c===1 ? "day-mon" : c===2 ? "day-tue" : c===3 ? "day-wed" : c===4 ? "day-thu" : "day-fri";
+      if (subj) {
+        html += `<td class="${dCls}" style="color:#000; font-weight:bold; border-radius:4px;">${subj}</td>`;
+      } else {
+        html += `<td class="text-muted ${dCls}" style="border-radius:4px; opacity: 0.5;">-</td>`;
+      }
+    }
+    html += `</tr>`;
   }
-  pt += `</tr></thead><tbody><tr>`;
-  for(let j = 1; j < fullData[row].length; j++) {
-    let v = isFree(fullData[row][j]) ? "공강" : formatSubject(fullData[row][j]);
-    if (j === col) pt += `<td style="background:var(--primary-color); color:white; font-weight:bold;">공강</td>`;
-    else if (j === pCol) pt += `<td style="background:var(--danger-color); color:white; font-weight:bold;">${formatSubject(pSubject)}</td>`;
-    else pt += `<td class="${dayClasses[j]}">${isFree(fullData[row][j]) ? "" : v}</td>`;
-  }
-  pt += `</tr><tr>`;
-  for(let j = 1; j < fullData[pRow].length; j++) {
-    let v = isFree(fullData[pRow][j]) ? "공강" : formatSubject(fullData[pRow][j]);
-    if (j === pCol) pt += `<td style="background:var(--primary-color); color:white; font-weight:bold;">공강</td>`;
-    else if (j === col) pt += `<td style="background:var(--danger-color); color:white; font-weight:bold;">${formatSubject(rawSubject)}</td>`;
-    else pt += `<td class="${dayClasses[j]}">${isFree(fullData[pRow][j]) ? "" : v}</td>`;
-  }
-  pt += `</tr></tbody></table>`;
-  return pt;
+  html += `</tbody></table>`;
+  return html;
 }
 
-function buildPreviewTableCover(myName, pName, row, pRow, col, rawSubject) {
-  let pt = `<table class="table" style="width:100%;"><thead><tr>`;
-  let dayClasses = [];
-  for(let j = 1; j < headerRow.length; j++) {
-    let hStr = headerRow[j];
-    let dCls = hStr.includes("월") ? "day-mon" : hStr.includes("화") ? "day-tue" :
-               hStr.includes("수") ? "day-wed" : hStr.includes("목") ? "day-thu" :
-               hStr.includes("금") ? "day-fri" : "";
-    let bCls = (j > 1 && j < headerRow.length - 1 && hStr.replace(/[0-9]/g, '') !== headerRow[j+1].replace(/[0-9]/g, '')) ? "day-border" : (j === headerRow.length -1 ? "day-border" : "");
-    dayClasses[j] = `${dCls} ${bCls}`;
-    let thClass = (j === col) ? 'bg-warning text-dark' : '';
-    pt += `<th class="${dayClasses[j]} ${thClass}">${headerRow[j]}</th>`;
-  }
-  pt += `</tr></thead><tbody><tr>`;
-  for(let j = 1; j < fullData[row].length; j++) {
-    let v = isFree(fullData[row][j]) ? "공강" : formatSubject(fullData[row][j]);
-    if (j === col) pt += `<td style="background:var(--primary-color); color:white; font-weight:bold;">공강</td>`;
-    else pt += `<td class="${dayClasses[j]}">${isFree(fullData[row][j]) ? "" : v}</td>`;
-  }
-  pt += `</tr><tr>`;
-  for(let j = 1; j < fullData[pRow].length; j++) {
-    let v = isFree(fullData[pRow][j]) ? "공강" : formatSubject(fullData[pRow][j]);
-    if (j === col) pt += `<td style="background:var(--danger-color); color:white; font-weight:bold;">${formatSubject(rawSubject)}</td>`;
-    else pt += `<td class="${dayClasses[j]}">${isFree(fullData[pRow][j]) ? "" : v}</td>`;
-  }
-  pt += `</tr></tbody></table>`;
-  return pt;
+function getTeacherSubject(name, periodStr) {
+  const row = fullData.find(r => r[0] === name);
+  if (!row) return null;
+  const colIndex = headerRow.indexOf(periodStr);
+  if (colIndex === -1) return null;
+  return row[colIndex] || null;
 }
 
-btnCloseModal.addEventListener("click", () => modal.classList.add("hidden"));
-document.addEventListener("keyup", (e) => {
-  if (e.key === "Escape") modal.classList.add("hidden");
+function getDayClass(periodStr) {
+  if (periodStr.startsWith("월")) return "day-mon";
+  if (periodStr.startsWith("화")) return "day-tue";
+  if (periodStr.startsWith("수")) return "day-wed";
+  if (periodStr.startsWith("목")) return "day-thu";
+  if (periodStr.startsWith("금")) return "day-fri";
+  return "";
+}
+
+btnCloseModal.addEventListener("click", () => {
+  modal.classList.remove("active");
 });
 
-function addToCart(item) {
-  localState[`semester${currentSemester}`].cart.push(item);
-  saveLocalState();
-  renderCartTab();
+document.addEventListener("keyup", (e) => {
+  if (e.key === "Escape" && modal.classList.contains("active")) {
+    modal.classList.remove("active");
+  }
+});
+
+// Admin Features
+btnAdminLogin.addEventListener("click", async () => {
+  const pwd = adminPwdInput.value;
+  try {
+    const docRef = doc(db, "settings", "admin");
+    let docSnap = await getDoc(docRef);
+    let realPwd = docSnap.exists() ? docSnap.data().password : "admin";
+    
+    if (pwd === realPwd) {
+      sessionStorage.setItem("adminAuth", "true");
+      document.getElementById("admin-login-area").classList.add("hidden");
+      document.getElementById("admin-dashboard").classList.remove("hidden");
+      const errorEl = document.getElementById("admin-error");
+      if (errorEl) errorEl.classList.add("hidden");
+    } else {
+      const errorEl = document.getElementById("admin-error");
+      if (errorEl) {
+        errorEl.classList.remove("hidden");
+      } else {
+        alert("비밀번호가 틀렸습니다.");
+      }
+    }
+  } catch(e) {
+    alert("오류 발생: " + e.message);
+  }
+});
+
+adminPwdInput.addEventListener("keyup", (e) => {
+  if (e.key === "Enter") btnAdminLogin.click();
+});
+
+if (btnSaveCutoff) {
+  btnSaveCutoff.addEventListener("click", () => {
+    if (cutoffInput.value.trim() === "") return;
+    localState.semesterCutoff = cutoffInput.value.trim();
+    saveLocalState();
+    alert("학기 전환 기준일이 저장되었습니다.");
+    autoSelectSemester();
+  });
 }
 
-window.removeFromCart = (idx) => {
-  localState[`semester${currentSemester}`].cart.splice(idx, 1);
+// Change Admin Password
+document.getElementById("btn-change-admin-pwd").addEventListener("click", async () => {
+  const newPwd = document.getElementById("new-admin-password").value;
+  if (!newPwd) return alert("비밀번호를 입력하세요.");
+  try {
+    await setDoc(doc(db, "settings", "admin"), { password: newPwd });
+    alert("관리자 비밀번호가 변경되었습니다.");
+    document.getElementById("new-admin-password").value = "";
+  } catch(e) {
+    alert("오류: " + e.message);
+  }
+});
+
+// Excel Upload
+document.getElementById("btn-upload-excel").addEventListener("click", () => {
+  const fileInput = document.getElementById("excel-upload");
+  if (!fileInput.files.length) return alert("파일을 선택하세요.");
+  
+  const reader = new FileReader();
+  reader.onload = async (e) => {
+    try {
+      const data = new Uint8Array(e.target.result);
+      const workbook = XLSX.read(data, { type: 'array' });
+      const worksheet = workbook.Sheets[workbook.SheetNames[0]];
+      const json = XLSX.utils.sheet_to_json(worksheet, { header: 1, defval: "" });
+      
+      await setDoc(doc(db, `semester_${currentSemester}`, "timetable"), {
+        data: JSON.stringify(json),
+        updatedAt: new Date().toISOString()
+      });
+      alert("성공적으로 업로드되었습니다!");
+      location.reload();
+    } catch(err) {
+      alert("처리 오류: " + err.message);
+    }
+  };
+  reader.readAsArrayBuffer(fileInput.files[0]);
+});
+
+// Meeting Tab
+function renderMeetingTab() {
+  const clContainer = document.getElementById("meeting-teacher-checklist");
+  const selected = localState[`semester${currentSemester}`].selectedTeachers || [];
+  let html = `<div class="d-flex flex-column gap-2" style="max-height: 500px; overflow-y: auto; overflow-x: hidden; padding-right: 5px;">`;
+  teachers.forEach((t, i) => {
+    let isActive = selected.includes(t) ? "active btn-primary text-white" : "btn-outline-primary";
+    html += `<button class="btn btn-sm ${isActive} toggle-teacher-btn text-start" data-val="${t}">${t}</button>`;
+  });
+  html += `</div>`;
+  clContainer.innerHTML = html;
+}
+
+document.addEventListener("click", (e) => {
+  if (e.target.classList.contains("toggle-teacher-btn")) {
+    let t = e.target.dataset.val;
+    let arr = localState[`semester${currentSemester}`].selectedTeachers || [];
+    if (arr.includes(t)) {
+      arr = arr.filter(v => v !== t);
+    } else {
+      arr.push(t);
+    }
+    localState[`semester${currentSemester}`].selectedTeachers = arr;
+    saveLocalState();
+    renderMeetingTab();
+    updateMeetingPreview();
+  }
+});
+
+function updateMeetingPreview() {
+  const selected = localState[`semester${currentSemester}`].selectedTeachers || [];
+  if (selected.length === 0) {
+    meetingTimetableArea.innerHTML = `<div class="text-center py-3 text-muted">교사를 선택해주세요.</div>`;
+    return;
+  }
+  
+  let previewHtml = `<div style="overflow-x: auto; width: 100%;">
+    <table class="table table-sm table-bordered text-center" style="font-size: 0.8rem; min-width: 1500px; background-color: white;">
+      <thead class="bg-light">
+        <tr>
+          <th style="width: 70px; vertical-align: middle;">교사</th>
+          ${headerRow.slice(1).map(h => `<th class="${getDayClass(h)}" style="vertical-align: middle;">${h}</th>`).join('')}
+        </tr>
+      </thead>
+      <tbody>`;
+      
+  for (let t of selected) {
+    previewHtml += `<tr>
+      <td class="font-bold bg-light" style="vertical-align: middle;">${t}</td>
+      ${headerRow.slice(1).map((h, i) => {
+        let subj = getTeacherSubject(t, h) || "";
+        let display = isFree(subj) ? "" : formatSubject(subj);
+        let ex = isExcluded(t, i + 1) ? `<br><span class="text-danger" style="font-size: 0.7rem;">(불가)</span>` : "";
+        return `<td class="${getDayClass(h)}">${display}${ex}</td>`;
+      }).join('')}
+    </tr>`;
+  }
+  
+  previewHtml += `</tbody></table></div>`;
+  meetingTimetableArea.innerHTML = previewHtml;
+}
+
+document.addEventListener("change", (e) => {
+  if (e.target.classList.contains("chk-teacher")) {
+    let arr = localState[`semester${currentSemester}`].selectedTeachers || [];
+    if (e.target.checked) {
+      if (!arr.includes(e.target.value)) arr.push(e.target.value);
+    } else {
+      arr = arr.filter(v => v !== e.target.value);
+    }
+    localState[`semester${currentSemester}`].selectedTeachers = arr;
+    saveLocalState();
+  }
+});
+
+const btnFindMeeting = document.getElementById("btn-find-meeting");
+const btnClearMeeting = document.getElementById("btn-clear-meeting");
+const btnCopyMeeting = document.getElementById("btn-copy-meeting");
+const meetingTimetableArea = document.getElementById("meeting-timetable-area");
+const meetingResultArea = document.getElementById("meeting-result-area");
+
+if (btnFindMeeting) {
+  btnFindMeeting.addEventListener("click", () => {
+    const selected = localState[`semester${currentSemester}`].selectedTeachers || [];
+    if (selected.length < 2) {
+      alert("비교할 교사를 2명 이상 선택하세요.");
+      return;
+    }
+    
+    let commonFree = [];
+    let reasonsHtml = `<ul class="list-group list-group-flush mt-3" style="font-size: 0.85rem; text-align: left;">`;
+    let hasReasons = false;
+
+    for (let i = 1; i < headerRow.length; i++) {
+      let isAllFree = true;
+      let reasonsForPeriod = [];
+      
+      for (let t of selected) {
+        let row = fullData.find(r => r[0] === t);
+        if (!row) {
+          isAllFree = false;
+          reasonsForPeriod.push(`[${t}] 데이터 없음`);
+          continue;
+        }
+        
+        let subj = row[i];
+        if (!isFree(subj)) {
+          isAllFree = false;
+          reasonsForPeriod.push(`[${t}] ${formatSubject(subj)}`);
+        }
+        if (isExcluded(t, i)) {
+          isAllFree = false;
+          reasonsForPeriod.push(`[${t}] 교체 불가`);
+        }
+      }
+      
+      if (isAllFree) {
+        commonFree.push(headerRow[i]);
+      } else {
+        hasReasons = true;
+        reasonsHtml += `<li class="list-group-item bg-transparent border-0 py-1">
+          <strong>${headerRow[i]}:</strong> <span class="text-muted">${reasonsForPeriod.join(', ')}</span>
+        </li>`;
+      }
+    }
+    reasonsHtml += `</ul>`;
+    
+    let html = "";
+    if (commonFree.length > 0) {
+      html += `<div class="alert alert-success m-0 font-bold mb-3">
+        <i class="bi bi-check-circle-fill"></i> 모두 공강인 시간: ${commonFree.join(", ")}
+      </div>`;
+    } else {
+      html += `<div class="alert alert-warning m-0 font-bold mb-3">
+        <i class="bi bi-exclamation-triangle-fill"></i> 모두 공강인 시간이 없습니다.
+      </div>`;
+    }
+    
+    if (hasReasons) {
+      html += `<div class="mt-2 text-start bg-white p-3 border rounded shadow-sm">
+        <h6 class="font-bold text-primary mb-2 border-bottom pb-2"><i class="bi bi-info-circle"></i> 공강이 아닌 사유 (전체 교시)</h6>
+        <div style="max-height: 200px; overflow-y: auto;">
+          ${reasonsHtml}
+        </div>
+      </div>`;
+    }
+    
+    meetingResultArea.innerHTML = html;
+    updateMeetingPreview();
+  });
+}
+
+if (btnClearMeeting) {
+  btnClearMeeting.addEventListener("click", () => {
+    localState[`semester${currentSemester}`].selectedTeachers = [];
+    saveLocalState();
+    renderMeetingTab();
+    meetingTimetableArea.innerHTML = `<div class="text-center py-3 text-muted">교사를 선택해주세요.</div>`;
+    meetingResultArea.innerHTML = `교사를 2명 이상 선택한 후 [공강 찾기]를 누르세요.`;
+  });
+}
+
+if (btnCopyMeeting) {
+  btnCopyMeeting.addEventListener("click", () => {
+    const selected = localState[`semester${currentSemester}`].selectedTeachers || [];
+    if (selected.length < 2) return alert("먼저 공강을 찾아주세요.");
+    const text = meetingResultArea.innerText;
+    navigator.clipboard.writeText(`[협의회 공강 시간]\n참여: ${selected.join(", ")}\n결과: ${text.trim()}`)
+      .then(() => alert("복사되었습니다."))
+      .catch(e => alert("복사 실패: " + e));
+  });
+}
+
+// Exclusion Tab
+window.renderExclusionTab = function() {
+  const gridArea = document.getElementById("exclusion-grid-area");
+  if (!teachers || teachers.length === 0) {
+    gridArea.innerHTML = `<div class="text-center py-4 text-muted">데이터가 없습니다.</div>`;
+    return;
+  }
+  
+  let html = `<table class="table table-sm text-center" style="font-size: 0.85rem;"><thead><tr><th>교사명</th>`;
+  for (let i = 1; i < headerRow.length; i++) {
+    html += `<th>${headerRow[i]}</th>`;
+  }
+  html += `</tr></thead><tbody>`;
+  
+  teachers.forEach(tName => {
+    let rowData = fullData.find(r => r[0] === tName);
+    if(!rowData) return;
+    
+    html += `<tr><td class="font-bold text-primary bg-light" style="vertical-align: middle;">${tName}</td>`;
+    let exclusions = localState[`semester${currentSemester}`].exclusions[tName] || [];
+    for (let i = 1; i < rowData.length; i++) {
+      let val = rowData[i] || "";
+      let isEx = exclusions.includes(i);
+      let cls = isEx ? 'is-excluded' : 'is-clickable';
+      html += `<td class="${cls}" style="border:1px solid rgba(0,0,0,0.1); cursor:pointer;" onclick="toggleExclusionCell('${tName}', ${i})">${val}</td>`;
+    }
+    html += `</tr>`;
+  });
+  
+  html += `</tbody></table>`;
+  gridArea.innerHTML = html;
+  
+  updateExclusionSummary();
+};
+
+window.toggleExclusionCell = function(tName, colIndex) {
+  if (!localState[`semester${currentSemester}`].exclusions[tName]) {
+    localState[`semester${currentSemester}`].exclusions[tName] = [];
+  }
+  let arr = localState[`semester${currentSemester}`].exclusions[tName];
+  if (arr.includes(colIndex)) {
+    arr.splice(arr.indexOf(colIndex), 1);
+  } else {
+    arr.push(colIndex);
+  }
+  saveLocalState();
+  renderExclusionTab();
+  renderTimetables();
+};
+
+window.updateExclusionSummary = function() {
+  const sumArea = document.getElementById("exclusion-summary");
+  let exclusions = localState[`semester${currentSemester}`].exclusions;
+  
+  let html = `<h4 class="mb-2 font-bold"><i class="bi bi-list-check"></i> 설정된 내역 요약 (자동 저장됨)</h4>
+              <table class="table table-sm table-bordered mt-2 text-center" style="font-size: 0.9rem; background-color: #fff;">
+                <thead class="bg-light">
+                  <tr>
+                    <th>교시</th>
+                    <th class="day-mon">월</th>
+                    <th class="day-tue">화</th>
+                    <th class="day-wed">수</th>
+                    <th class="day-thu">목</th>
+                    <th class="day-fri">금</th>
+                  </tr>
+                </thead>
+                <tbody>`;
+                
+  let hasAnyExclusion = false;
+  for (let p = 1; p <= 7; p++) {
+    html += `<tr><td class="font-bold text-muted bg-light">${p}</td>`;
+    for (let d = 1; d <= 5; d++) {
+      let colIndex = (d - 1) * 7 + p;
+      let excludedTeachers = [];
+      for (let t in exclusions) {
+        if (exclusions[t] && exclusions[t].includes(colIndex)) {
+          excludedTeachers.push(t);
+          hasAnyExclusion = true;
+        }
+      }
+      let dCls = d===1 ? "day-mon" : d===2 ? "day-tue" : d===3 ? "day-wed" : d===4 ? "day-thu" : "day-fri";
+      html += `<td class="${dCls} text-danger font-bold" style="white-space: pre-wrap; word-break: keep-all;">${excludedTeachers.join(', ')}</td>`;
+    }
+    html += `</tr>`;
+  }
+  html += `</tbody></table>`;
+  
+  sumArea.innerHTML = !hasAnyExclusion ? `<div class="text-muted">설정된 교체 불가 내역이 없습니다.</div>` : html;
+};
+
+document.getElementById("btn-clear-all-exclusions").addEventListener("click", () => {
+  if (confirm("이 기기의 교체 불가 설정을 모두 초기화하시겠습니까?")) {
+    localState[`semester${currentSemester}`].exclusions = {};
+    saveLocalState();
+    renderExclusionTab();
+    renderTimetables();
+  }
+});
+
+// Download Excel Template
+document.getElementById("btn-download-template").addEventListener("click", () => {
+  const ws_data = [
+    ["교사", "1", "2", "3", "4", "5", "6", "7", "1", "2", "3", "4", "5", "6", "7"],
+    ["", "월", "월", "월", "월", "월", "월", "월", "화", "화", "화", "화", "화", "화", "화"],
+    ["홍길동", "101 국어", "102 국어", "", "103 국어", "", "", "", "", "101 국어", "102 국어", "", "103 국어", "", ""]
+  ];
+  const ws = XLSX.utils.aoa_to_sheet(ws_data);
+  const wb = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb, ws, "시간표양식");
+  XLSX.writeFile(wb, "수업교체시간표_양식.xlsx");
+});
+
+// --- Cart & Plan Generation ---
+
+window.addToCart = (type, myName, myPeriod, mySubject, partnerName, partnerPeriod, partnerSubject) => {
+  const cart = localState[`semester${currentSemester}`].cart;
+  cart.push({
+    id: Date.now().toString(),
+    type,
+    myName, myPeriod, mySubject,
+    partnerName, partnerPeriod, partnerSubject,
+    dateAdded: new Date().toLocaleDateString()
+  });
+  saveLocalState();
+  renderCartTab();
+  alert("결보강 장바구니에 담겼습니다!");
+};
+
+window.removeFromCart = (id) => {
+  let cart = localState[`semester${currentSemester}`].cart;
+  localState[`semester${currentSemester}`].cart = cart.filter(item => item.id !== id);
   saveLocalState();
   renderCartTab();
 };
 
-function parseSubjectForHwp(subjectString) {
-  if (!subjectString) return "";
-  let str = String(subjectString).trim();
-  let match = str.match(/^(\d)(\d{2})\s*(.+)$/);
-  if (match) {
-    let grade = match[1];
-    let classNum = parseInt(match[2], 10);
-    let subj = match[3];
-    return `${grade}학년 ${classNum}반 ${subj}`;
+document.getElementById("btn-clear-cart").addEventListener("click", () => {
+  if(confirm("장바구니를 비우시겠습니까?")) {
+    localState[`semester${currentSemester}`].cart = [];
+    saveLocalState();
+    renderCartTab();
   }
-  return str;
+});
+
+window.copyHwpTable = () => {
+  const container = document.getElementById("hwp-table-container");
+  if (!container) return;
+  const range = document.createRange();
+  range.selectNode(container);
+  window.getSelection().removeAllRanges();
+  window.getSelection().addRange(range);
+  try {
+    document.execCommand('copy');
+    alert("한글(HWP) 복사가 완료되었습니다. Ctrl+V로 붙여넣으세요.");
+  } catch (err) { alert("복사 실패"); }
+  window.getSelection().removeAllRanges();
+};
+
+function parseSubjectForHwp(rawStr) {
+  if (!rawStr) return "";
+  let s = rawStr.replace(/<br>/g, " ");
+  s = s.replace(/<[^>]*>?/gm, '');
+  return s.trim();
 }
 
 function renderCartTab() {
-  const cartList = document.getElementById("cart-list-area");
-  let cart = localState[`semester${currentSemester}`].cart;
+  const cart = localState[`semester${currentSemester}`].cart;
+  const container = document.getElementById("cart-list-area");
+  
   if (!cart || cart.length === 0) {
-    cartList.innerHTML = `<div class="text-center py-5 text-muted">장바구니가 비어 있습니다. 매칭 결과에서 내역을 담아주세요.</div>`;
+    container.innerHTML = `<div class="text-center py-5 text-muted">장바구니가 비어 있습니다. 매칭 결과에서 내역을 담아주세요.</div>`;
     return;
   }
   
@@ -536,11 +966,11 @@ function renderCartTab() {
       <p class="text-muted text-sm mt-1">※ '한글 양식 복사하기' 버튼을 누른 후 한글(HWP)에 붙여넣기(Ctrl+V) 하세요.</p>
     </div>
     <div id="hwp-table-container" style="padding: 20px; background: white; color: black; border: 1px solid #ccc; overflow-x: auto;">
-      <div style="font-size: 16pt; font-weight: bold; text-align: center; margin-bottom: 20px;">결강으로 인한 보강 계획</div>
+      <div style="font-size: 16pt; font-weight: bold; text-align: center; margin-bottom: 20px;">결보강 및 수업교체 계획</div>
       
       <table style="width: 100%; min-width: 800px; border-collapse: collapse; text-align: center; font-size: 11pt; border: 2px solid black;">
         <thead>
-          <tr>
+          <tr style="background-color: #f2f2f2;">
             <th style="border: 1px solid black; padding: 4px; font-weight: bold;">결보강/수업교체</th>
             <th style="border: 1px solid black; padding: 4px; font-weight: bold;">일자</th>
             <th style="border: 1px solid black; padding: 4px; font-weight: bold;">요일</th>
@@ -560,14 +990,14 @@ function renderCartTab() {
         <tbody>
   `;
   
-  cart.forEach((c, idx) => {
+  cart.forEach(c => {
     let typeStr = c.type === 'swap' ? '수업교체' : '결보강';
     let myDay = c.myPeriod.replace(/[0-9]/g, '');
     let myNum = c.myPeriod.replace(/[^0-9]/g, '');
     let myParsed = parseSubjectForHwp(c.mySubject);
     let myClass = "";
     let mySubj = myParsed;
-    // split "1학년 2반 기하" into "1학년 2반" and "기하"
+    
     let m = myParsed.match(/(^\d학년\s*\d반)\s*(.+)$/);
     if (m) { myClass = m[1]; mySubj = m[2]; }
     
@@ -604,244 +1034,94 @@ function renderCartTab() {
   });
   
   html += `</tbody></table></div>`;
+  
   html += `<div class="mt-3"><table class="table"><tbody>`;
-  cart.forEach((c, idx) => {
+  cart.forEach(c => {
     let typeBadge = c.type === 'swap' ? '<span class="badge bg-success">교체</span>' : '<span class="badge bg-info">대강</span>';
-    html += `<tr><td>${typeBadge}</td><td class="font-bold">${c.myName}</td><td class="text-primary font-bold">${c.partnerName}</td>
+    html += `<tr>
+      <td>${typeBadge}</td>
+      <td class="font-bold">${c.myName}</td>
+      <td class="text-primary font-bold">${c.partnerName}</td>
       <td>${c.myPeriod}<br><small>${c.mySubject}</small></td>
       <td>${c.type==='swap' ? c.partnerPeriod+'<br><small>'+c.partnerSubject+'</small>' : '-'}</td>
-      <td><button class="btn btn-sm btn-outline-danger" onclick="removeFromCart(${idx})">삭제</button></td></tr>`;
+      <td><button class="btn btn-sm btn-outline-danger" onclick="removeFromCart('${c.id}')">삭제</button></td>
+    </tr>`;
   });
   html += `</tbody></table></div>`;
-  cartList.innerHTML = html;
-}
-
-window.copyHwpTable = () => {
-  const container = document.getElementById("hwp-table-container");
-  if (!container) return;
-  const range = document.createRange();
-  range.selectNode(container);
-  window.getSelection().removeAllRanges();
-  window.getSelection().addRange(range);
-  try {
-    document.execCommand('copy');
-    alert("한글 양식이 복사되었습니다. Ctrl+V로 붙여넣으세요.");
-  } catch (err) { alert("복사 실패"); }
-  window.getSelection().removeAllRanges();
-};
-
-document.getElementById("btn-clear-cart").addEventListener("click", () => {
-  if(confirm("장바구니를 비우시겠습니까?")) {
-    localState[`semester${currentSemester}`].cart = [];
-    saveLocalState();
-    renderCartTab();
-  }
-});
-
-function renderExclusionTab() {
-  const area = document.getElementById("exclusion-area");
-  if (fullData.length === 0) {
-    area.innerHTML = `<div class="text-center py-5 text-muted">데이터가 없습니다.</div>`;
-    return;
-  }
-  area.innerHTML = generateTableHtml("toggleExclusion");
-}
-
-function toggleExclusionCell(teacherName, colIndex) {
-  let exc = localState[`semester${currentSemester}`].exclusions;
-  if (!exc[teacherName]) exc[teacherName] = [];
   
-  const idx = exc[teacherName].indexOf(colIndex);
-  if (idx > -1) {
-    exc[teacherName].splice(idx, 1);
-  } else {
-    exc[teacherName].push(colIndex);
-  }
-  saveLocalState();
-  renderTimetables();
-  renderExclusionTab();
+  container.innerHTML = html;
 }
 
-function renderMeetingTab() {
-  const clContainer = document.getElementById("meeting-teacher-checklist");
-  const selected = localState[`semester${currentSemester}`].selectedTeachers || [];
-  
-  let html = "";
-  teachers.forEach((t, i) => {
-    let isChecked = selected.includes(t) ? "checked" : "";
-    html += `
-      <div class="d-flex align-center gap-2 mb-2 p-1 teacher-chk-item" style="background: rgba(255,255,255,0.6); border-radius: 4px;">
-        <input type="checkbox" id="chk-${i}" value="${t}" class="chk-teacher" ${isChecked}>
-        <label for="chk-${i}" class="w-100 is-clickable">${t}</label>
-      </div>
-    `;
-  });
-  clContainer.innerHTML = html;
-
-  document.querySelectorAll(".chk-teacher").forEach(chk => {
-    chk.addEventListener("change", () => {
-      const selectedNow = Array.from(document.querySelectorAll(".chk-teacher:checked")).map(c => c.value);
-      localState[`semester${currentSemester}`].selectedTeachers = selectedNow;
-      saveLocalState();
-      updateMeetingTimetable(selectedNow);
-    });
-  });
-
-  document.getElementById("search-meeting-teacher").addEventListener("input", (e) => {
-    const kw = e.target.value.trim();
-    document.querySelectorAll(".teacher-chk-item").forEach(div => {
-      div.style.display = div.innerText.includes(kw) ? "flex" : "none";
-    });
-  });
-
-  if (selected.length > 0) updateMeetingTimetable(selected);
-}
-
-document.getElementById("btn-clear-meeting").addEventListener("click", () => {
-  document.querySelectorAll(".chk-teacher").forEach(chk => chk.checked = false);
-  localState[`semester${currentSemester}`].selectedTeachers = [];
-  saveLocalState();
-  updateMeetingTimetable([]);
-});
-
-function updateMeetingTimetable(selected) {
-  const area = document.getElementById("meeting-timetable-area");
-  if (selected.length === 0) {
-    area.innerHTML = `<div class="text-center py-3 text-muted">교사를 선택해주세요.</div>`;
-    return;
+document.getElementById("btn-download-plan").addEventListener("click", () => {
+  const cart = localState[`semester${currentSemester}`].cart;
+  if (!cart || cart.length === 0) {
+    return alert("장바구니가 비어 있습니다.");
   }
   
-  let html = `<div style="overflow-x: auto; width: 100%;"><table class="table" style="font-size: 0.7rem; min-width:600px;"><thead><tr>`;
-  headerRow.forEach((h, j) => {
-    html += `<th>${h}</th>`;
-  });
-  html += `</tr></thead><tbody>`;
-
-  selected.forEach(s => {
-    let r = fullData.findIndex(row => row[0] === s);
-    if (r > -1) {
-      html += `<tr>`;
-      fullData[r].forEach((val, j) => {
-        let dVal = isFree(val) ? "" : formatSubject(val);
-        html += `<td class="${j===0?'font-bold':''}">${dVal}</td>`;
-      });
-      html += `</tr>`;
-    }
-  });
-  html += `</tbody></table></div>`;
-  area.innerHTML = html;
-}
-
-document.getElementById("btn-find-meeting").addEventListener("click", () => {
-  const selected = localState[`semester${currentSemester}`].selectedTeachers || [];
-  const resultDiv = document.getElementById("meeting-result-area");
+  // Create an Excel Sheet that fits on one page and mimics the HWpx form
+  const ws_data = [];
   
-  if (selected.length < 2) {
-    resultDiv.innerHTML = `<div class="text-danger p-3 text-center">교사를 2명 이상 선택하세요.</div>`;
-    return;
-  }
-
-  let available = [];
-  let reasonsHtml = `<div class="mt-3"><h4 class="text-danger mb-2">불가 사유 안내 (수업자)</h4><ul class="text-sm">`;
-  let hasReasons = false;
-
-  for (let c = 1; c < headerRow.length; c++) {
-    let busy = selected.filter(s => {
-      let r = fullData.findIndex(row => row[0] === s);
-      return !isFree(fullData[r][c]);
-    });
-    if (busy.length === 0) {
-      available.push(headerRow[c]);
-    } else {
-      reasonsHtml += `<li><b>${headerRow[c]}</b> : ${busy.join(', ')}</li>`;
-      hasReasons = true;
-    }
-  }
-  reasonsHtml += `</ul></div>`;
-
-  if (available.length === 0) {
-    resultDiv.innerHTML = `<div class="text-danger text-center p-3 font-bold">모두 공강인 시간이 없습니다.</div>` + (hasReasons ? reasonsHtml : "");
-  } else {
-    resultDiv.innerHTML = `
-      <div id="copyArea" class="glass-panel" style="background: rgba(25, 135, 84, 0.1); border-color: var(--success-color);">
-        <div class="font-bold text-success mb-2">✅ 협의회 가능 시간 안내</div>
-        <div>▪ <b>참석자:</b> ${selected.join(', ')}</div>
-        <div class="mt-1">▪ <b>가능 시간:</b> <span class="text-primary font-bold">${available.join(', ')}</span></div>
-      </div>
-    ` + (hasReasons ? reasonsHtml : "");
-  }
-});
-
-document.getElementById("btn-copy-meeting").addEventListener("click", () => {
-  const area = document.getElementById("copyArea");
-  if (area) {
-    navigator.clipboard.writeText(area.innerText).then(() => alert("복사 완료!"));
-  } else {
-    alert("결과가 없습니다.");
-  }
-});
-
-btnAdminLogin.addEventListener("click", async () => {
-  const pwd = adminPwdInput.value;
-  try {
-    const docRef = doc(db, "settings", "admin");
-    let docSnap = await getDoc(docRef);
-    let realPwd = docSnap.exists() ? docSnap.data().password : "admin";
-    if (pwd === realPwd) {
-      sessionStorage.setItem("adminAuth", "true");
-      document.getElementById("admin-auth-area").classList.add("hidden");
-      document.getElementById("admin-dashboard").classList.remove("hidden");
-    } else {
-      alert("비밀번호가 틀렸습니다.");
-    }
-  } catch(e) {
-    alert("로그인 중 오류가 발생했습니다: " + e.message);
-    console.error(e);
-  }
-});
-
-adminPwdInput.addEventListener("keyup", (e) => {
-  if (e.key === "Enter") btnAdminLogin.click();
-});
-
-if (btnSaveCutoff) {
-  btnSaveCutoff.addEventListener("click", async () => {
-    if (cutoffInput.value.trim() === "") return;
-    localState.semesterCutoff = cutoffInput.value.trim();
-    saveLocalState();
-    try {
-      await setDoc(doc(db, "settings", "general"), { semesterCutoff: localState.semesterCutoff }, { merge: true });
-      alert("학기 전환 기준일이 저장되었습니다.");
-    } catch(e) {}
-    autoSelectSemester();
+  // Header
+  ws_data.push(["결 보 강  계 획 서"]);
+  ws_data.push([""]); // Empty row
+  
+  // Construct the table
+  ws_data.push(["구 분", "원수업교사", "과목 및 학반", "결강(변경전) 일시", "보강교사", "보강(변경후) 일시", "사 유"]);
+  
+  cart.forEach(item => {
+    let typeStr = item.type === 'swap' ? '교체' : '대강';
+    let mySubj = item.mySubject.replace(/<br>/g, " ");
+    let partnerTime = item.type === 'swap' ? item.partnerPeriod : '대강';
+    
+    ws_data.push([
+      typeStr,
+      item.myName,
+      mySubj,
+      item.myPeriod,
+      item.partnerName,
+      partnerTime,
+      "" // Reason (left blank for user to fill)
+    ]);
   });
-  cutoffInput.addEventListener("keyup", (e) => {
-    if (e.key === "Enter") btnSaveCutoff.click();
-  });
-}
+  
+  ws_data.push([""]);
+  ws_data.push(["위와 같이 결보강 계획서를 제출합니다."]);
+  ws_data.push([""]);
+  const today = new Date();
+  ws_data.push([`2026년  ${today.getMonth()+1}월  ${today.getDate()}일`]);
+  ws_data.push([""]);
+  ws_data.push(["제출자:                   (인)"]);
+  
+  const ws = XLSX.utils.aoa_to_sheet(ws_data);
+  
+  // Set column widths
+  ws["!cols"] = [
+    { wch: 8 },  // 구분
+    { wch: 12 }, // 원수업교사
+    { wch: 15 }, // 과목 및 학반
+    { wch: 18 }, // 결강일시
+    { wch: 12 }, // 보강교사
+    { wch: 18 }, // 보강일시
+    { wch: 15 }  // 사유
+  ];
 
-document.getElementById("btn-upload-excel").addEventListener("click", () => {
-  const fileInput = document.getElementById("excel-upload");
-  if (!fileInput.files.length) return alert("파일을 선택하세요.");
-  const reader = new FileReader();
-  reader.onload = async (e) => {
-    try {
-      const data = new Uint8Array(e.target.result);
-      const workbook = XLSX.read(data, { type: 'array' });
-      const worksheet = workbook.Sheets[workbook.SheetNames[0]];
-      const json = XLSX.utils.sheet_to_json(worksheet, { header: 1, defval: "" });
-      
-      await setDoc(doc(db, `semester_${currentSemester}`, "timetable"), {
-        data: JSON.stringify(json),
-        updatedAt: new Date().toISOString()
-      });
-      alert("업로드되었습니다!");
-      location.reload();
-    } catch(err) {
-      alert("오류: " + err.message);
-    }
-  };
-  reader.readAsArrayBuffer(fileInput.files[0]);
+  // Merge Cells for Header
+  ws["!merges"] = [
+    { s: {r:0, c:0}, e: {r:0, c:6} }, // Title
+    { s: {r:ws_data.length-4, c:0}, e: {r:ws_data.length-4, c:6} },
+    { s: {r:ws_data.length-2, c:0}, e: {r:ws_data.length-2, c:6} },
+    { s: {r:ws_data.length-1, c:0}, e: {r:ws_data.length-1, c:6} }
+  ];
+  
+  // Page Setup for Printing (Fit to 1 Page)
+  ws["!pageSetup"] = { fitToWidth: 1, fitToHeight: 1, orientation: 'portrait' };
+  
+  // Create workbook and add sheet
+  const wb = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb, ws, "결보강계획서");
+  
+  XLSX.writeFile(wb, `결보강계획서_${new Date().getTime()}.xlsx`);
 });
 
 init();
+
