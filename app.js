@@ -1287,7 +1287,7 @@ const sidebar = document.getElementById('sidebar');
 
 if (btnMobileMenu && sidebar) {
   btnMobileMenu.addEventListener('click', () => {
-    sidebar.classList.add('mobile-open');
+    sidebar.classList.toggle('mobile-open');
   });
 }
 if (btnCloseSidebar && sidebar) {
