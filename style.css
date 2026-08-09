@@ -407,6 +407,22 @@ body {
 
 /* Mobile Optimization - Strictly applied to max-width: 768px */
 @media (max-width: 768px) {
+  /* 1. Timetable Day Filtering (Restore to prevent horizontal scroll on main timetables) */
+  .show-mobile-mon th:not(.day-mon):not(.header-cell),
+  .show-mobile-mon td:not(.day-mon):not(.text-nowrap) { display: none !important; }
+  
+  .show-mobile-tue th:not(.day-tue):not(.header-cell),
+  .show-mobile-tue td:not(.day-tue):not(.text-nowrap) { display: none !important; }
+  
+  .show-mobile-wed th:not(.day-wed):not(.header-cell),
+  .show-mobile-wed td:not(.day-wed):not(.text-nowrap) { display: none !important; }
+  
+  .show-mobile-thu th:not(.day-thu):not(.header-cell),
+  .show-mobile-thu td:not(.day-thu):not(.text-nowrap) { display: none !important; }
+  
+  .show-mobile-fri th:not(.day-fri):not(.header-cell),
+  .show-mobile-fri td:not(.day-fri):not(.text-nowrap) { display: none !important; }
+
   /* Ensure first column (teacher name) is visible and sticky */
   #table-swap table th:first-child, #table-swap table td:first-child,
   #table-cover table th:first-child, #table-cover table td:first-child {
@@ -416,11 +432,30 @@ body {
     z-index: 5;
   }
 
-  /* Prevent text from stacking vertically in tables */
+  /* Prevent text from stacking vertically in ALL tables */
   .table th, .table td { white-space: nowrap !important; }
 
-  /* Stack side-by-side elements vertically on mobile */
+  /* Stack side-by-side elements vertically on mobile (Meeting / Exclusion) */
   .meeting-layout, .exclusion-controls { flex-direction: column !important; }
+
+  /* Modal Table Optimization - Prevent cutoff and bad line breaks */
+  .mobile-modal-table {
+    table-layout: fixed;
+    width: 100%;
+  }
+  .mobile-modal-table th, .mobile-modal-table td {
+    padding: 2px 1px !important;
+    font-size: 0.65rem !important;
+    white-space: nowrap !important;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  
+  /* Cart Table Optimization - Fit screen */
+  #cart-list-area table th, #cart-list-area table td {
+    padding: 4px 2px !important;
+    font-size: 0.75rem !important;
+  }
 }
 
 
