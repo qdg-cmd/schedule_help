@@ -530,6 +530,7 @@ body {
 
 /* 모바일 화면에서는 모바일 전용 요소 보임 */
 @media (max-width: 768px) {
+  .app-container { flex-direction: column !important; }
   .d-md-none { display: block !important; }
   .mobile-day-selector { display: block !important; }
   .mobile-header { display: flex !important; }
