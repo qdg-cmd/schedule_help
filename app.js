@@ -303,7 +303,8 @@ function generateTableHtml(actionFunc) {
                hStr.includes("수") ? "day-wed" : hStr.includes("목") ? "day-thu" :
                hStr.includes("금") ? "day-fri" : "";
     let bCls = (j > 0 && j < headerRow.length - 1 && hStr.replace(/[0-9]/g, '') !== headerRow[j+1].replace(/[0-9]/g, '')) ? "day-border" : (j === headerRow.length -1 ? "day-border" : "");
-    dayClasses[j] = `${dCls} ${bCls}`;
+    let extraCls = (j === 0) ? " header-cell" : "";
+    dayClasses[j] = `${dCls} ${bCls}${extraCls}`;
     html += `<th class="${dayClasses[j]}">${hStr}</th>`;
   }
   html += `</tr></thead><tbody>`;
@@ -408,7 +409,7 @@ function showModal(title, partners, mode, myName, myPeriod, rawSubject) {
           </button>
         </div>
         
-        <div style="overflow-x: hidden; width: 100%;">
+        <div class="hide-on-mobile" style="overflow-x: hidden; width: 100%;">
           <table class="table table-sm table-bordered text-center" style="font-size: 0.75rem; width: 100%; table-layout: fixed; margin-bottom: 0; word-break: keep-all;">
             <thead class="bg-light">
               <tr>
@@ -453,6 +454,43 @@ function showModal(title, partners, mode, myName, myPeriod, rawSubject) {
               </tr>
             </tbody>
           </table>
+        </div>
+
+        <!-- 모바일 모달 뷰 (각각의 교사별 요일 1개씩 렌더링) -->
+        <div class="hide-on-pc mt-3" style="width: 100%;">
+          ${(()=>{
+            let myDayStr = myPeriod.replace(/[0-9]/g, '');
+            let pDayStr = mode === 'swap' ? p.pPeriod.replace(/[0-9]/g, '') : myDayStr;
+            let periods = [1,2,3,4,5,6,7];
+            let genRow = (tName, dayStr, highlightPr, swapPr, isMy) => {
+              let ths = periods.map(pr => `<th>${pr}</th>`).join('');
+              let tds = periods.map(pr => {
+                let h = dayStr + pr;
+                let subj = getTeacherSubject(tName, h) || "";
+                let display = isFree(subj) ? "" : formatSubject(subj);
+                let cellStyle = "";
+                if (h === highlightPr) {
+                  cellStyle = isMy ? "background-color: #dc3545 !important; color: white !important; font-weight:bold;" : "background-color: #0d6efd !important; color: white !important; font-weight:bold;";
+                  if (!isMy) display = "공강";
+                } else if (mode === 'swap' && h === swapPr) {
+                  cellStyle = isMy ? "background-color: #0d6efd !important; color: white !important; font-weight:bold;" : "background-color: #dc3545 !important; color: white !important; font-weight:bold;";
+                  if (isMy) display = "공강";
+                }
+                return `<td style="${cellStyle}">${display}</td>`;
+              }).join('');
+              return `
+                <div class="mb-2">
+                  <div class="font-bold text-start mb-1" style="font-size: 0.85rem; color: #555;"><i class="bi bi-person-fill"></i> ${tName} (${dayStr}요일)</div>
+                  <table class="table table-bordered mobile-modal-table mb-0">
+                    <thead class="bg-light"><tr>${ths}</tr></thead>
+                    <tbody><tr>${tds}</tr></tbody>
+                  </table>
+                </div>
+              `;
+            };
+            return genRow(myName, myDayStr, myPeriod, p.pPeriod, true) + 
+                   genRow(p.name, pDayStr, p.pPeriod, myPeriod, false);
+          })()}
         </div>
       </div>
     `;
