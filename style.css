@@ -423,21 +423,31 @@ body {
   .show-mobile-fri th:not(.day-fri):not(.header-cell),
   .show-mobile-fri td:not(.day-fri):not(.text-nowrap) { display: none !important; }
 
-  /* Ensure first column (teacher name) is visible and sticky */
-  #table-swap table th:first-child, #table-swap table td:first-child,
-  #table-cover table th:first-child, #table-cover table td:first-child {
-    position: sticky;
-    left: 0;
-    background-color: white !important;
-    z-index: 5;
-  }
-
-  /* Prevent text from stacking vertically in ALL tables */
-  .table th, .table td { 
-    white-space: nowrap !important; 
-    font-size: 0.75rem !important;
-    padding: 4px 2px !important;
-  }
+    /* Ensure first column (teacher name) is visible and sticky */
+    #table-swap table th:first-child, #table-swap table td:first-child,
+    #table-cover table th:first-child, #table-cover table td:first-child {
+      position: sticky;
+      left: 0;
+      background-color: white !important;
+      z-index: 5;
+      min-width: 55px !important;
+      max-width: 55px !important;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      padding-left: 2px !important;
+      padding-right: 2px !important;
+    }
+  
+    /* Prevent text from stacking vertically in ALL tables */
+    .table th, .table td { 
+      white-space: nowrap !important; 
+      font-size: 0.85rem !important;
+      padding: 6px 4px !important;
+    }
+    
+    /* Modal Text Optimization for Mobile */
+    .modal-body h5 { font-size: 1.05rem !important; }
+    .modal-body .font-bold { font-size: 0.95rem !important; }
 
   /* Stack side-by-side elements vertically on mobile (Meeting / Exclusion) */
   .meeting-layout, .exclusion-controls { flex-direction: column !important; }
@@ -447,10 +457,10 @@ body {
     display: none !important;
   }
 
-  /* Modal Table Optimization - Use scaled down PC version on mobile */
-  .pc-modal-table {
-    zoom: 0.60;
-  }
+    /* Modal Table Optimization - Natural scroll on mobile (Option A) */
+    .pc-modal-table {
+      zoom: 1 !important;
+    }
   
   /* Cart Table Optimization - Fit screen */
   #cart-list-area table th, #cart-list-area table td {
