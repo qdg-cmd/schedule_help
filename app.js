@@ -416,8 +416,8 @@ function showModal(title, partners, mode, myName, myPeriod, rawSubject) {
           </button>
         </div>
         
-        <div class="hide-on-mobile" style="overflow-x: hidden; width: 100%;">
-          <table class="table table-sm table-bordered text-center" style="font-size: 0.75rem; width: 100%; table-layout: fixed; margin-bottom: 0; word-break: keep-all;">
+        <div style="overflow-x: auto; width: 100%; -webkit-overflow-scrolling: touch;">
+          <table class="table table-sm table-bordered text-center pc-modal-table" style="font-size: 0.75rem; width: 100%; min-width: 800px; table-layout: fixed; margin-bottom: 0; word-break: keep-all;">
             <thead class="bg-light">
               <tr>
                 <th style="width: 50px;">교사</th>
@@ -461,57 +461,6 @@ function showModal(title, partners, mode, myName, myPeriod, rawSubject) {
               </tr>
             </tbody>
           </table>
-        </div>
-
-        <!-- 모바일 모달 뷰 (각각의 교사별 교체되는 두 요일 모두 렌더링) -->
-        <div class="hide-on-pc mt-3" style="width: 100%;">
-          ${(()=>{
-            let myDayStr = myPeriod.replace(/[0-9]/g, '');
-            let pDayStr = mode === 'swap' ? p.pPeriod.replace(/[0-9]/g, '') : myDayStr;
-            let daysToRender = (myDayStr === pDayStr) ? [myDayStr] : [myDayStr, pDayStr];
-            let periods = [1,2,3,4,5,6,7];
-            
-            let genTable = (tName, isMy) => {
-              let htmlChunk = `
-                <div class="mb-3">
-                  <div class="font-bold text-start mb-1" style="font-size: 0.9rem; color: #333;"><i class="bi bi-person-fill"></i> ${tName}</div>
-                  <table class="table table-bordered mobile-modal-table mb-0">
-                    <thead class="bg-light">
-                      <tr>
-                        <th style="width: 35px;">요일</th>
-                        ${periods.map(pr => `<th>${pr}</th>`).join('')}
-                      </tr>
-                    </thead>
-                    <tbody>
-              `;
-              
-              daysToRender.forEach(dayStr => {
-                htmlChunk += `<tr><td class="font-bold bg-light" style="vertical-align:middle; font-size:0.8rem;">${dayStr}</td>`;
-                periods.forEach(pr => {
-                  let h = dayStr + pr;
-                  let subj = getTeacherSubject(tName, h) || "";
-                  let display = isFree(subj) ? "" : formatSubject(subj);
-                  let cellStyle = "";
-                  
-                  if (h === myPeriod) {
-                    cellStyle = isMy ? "background-color: #dc3545 !important; color: white !important; font-weight:bold;" : "background-color: #0d6efd !important; color: white !important; font-weight:bold;";
-                    if (!isMy) display = "공강";
-                  } else if (mode === 'swap' && h === p.pPeriod) {
-                    cellStyle = isMy ? "background-color: #0d6efd !important; color: white !important; font-weight:bold;" : "background-color: #dc3545 !important; color: white !important; font-weight:bold;";
-                    if (isMy) display = "공강";
-                  }
-                  
-                  htmlChunk += `<td style="${cellStyle}">${display}</td>`;
-                });
-                htmlChunk += `</tr>`;
-              });
-              
-              htmlChunk += `</tbody></table></div>`;
-              return htmlChunk;
-            };
-            
-            return genTable(myName, true) + genTable(p.name, false);
-          })()}
         </div>
       </div>
     `;
