@@ -433,28 +433,37 @@ body {
   }
 
   /* Prevent text from stacking vertically in ALL tables */
-  .table th, .table td { white-space: nowrap !important; }
+  .table th, .table td { 
+    white-space: nowrap !important; 
+    font-size: 0.75rem !important;
+    padding: 4px 2px !important;
+  }
 
   /* Stack side-by-side elements vertically on mobile (Meeting / Exclusion) */
   .meeting-layout, .exclusion-controls { flex-direction: column !important; }
+  
+  /* Hide Meeting Timetable Area on Mobile */
+  #meeting-timetable-area {
+    display: none !important;
+  }
 
   /* Modal Table Optimization - Prevent cutoff and bad line breaks */
   .mobile-modal-table {
-    table-layout: fixed;
+    table-layout: auto;
     width: 100%;
   }
   .mobile-modal-table th, .mobile-modal-table td {
-    padding: 2px 1px !important;
+    padding: 3px 2px !important;
     font-size: 0.65rem !important;
-    white-space: nowrap !important;
-    overflow: hidden;
-    text-overflow: ellipsis;
+    white-space: normal !important;
+    word-break: keep-all;
+    overflow: visible;
   }
   
   /* Cart Table Optimization - Fit screen */
   #cart-list-area table th, #cart-list-area table td {
     padding: 4px 2px !important;
-    font-size: 0.75rem !important;
+    font-size: 0.70rem !important;
   }
 }
 

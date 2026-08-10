@@ -605,10 +605,10 @@ btnAdminLogin.addEventListener("click", async () => {
       sessionStorage.setItem("adminAuth", "true");
       document.getElementById("admin-login-area").classList.add("hidden");
       document.getElementById("admin-dashboard").classList.remove("hidden");
-      const errorEl = document.getElementById("admin-error");
+      const errorEl = document.getElementById("admin-login-error");
       if (errorEl) errorEl.classList.add("hidden");
     } else {
-      const errorEl = document.getElementById("admin-error");
+      const errorEl = document.getElementById("admin-login-error");
       if (errorEl) {
         errorEl.classList.remove("hidden");
       } else {
